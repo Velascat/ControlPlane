@@ -368,6 +368,34 @@ class TestDefaultsAndSelfCheck:
         assert any("pasta" in p for p in problems)
         assert any("OC_EGRESS_PROXY" in p for p in problems)
 
+    def test_verify_containment_reports_missing_iptables(self, monkeypatch):
+        # The boot check covered bwrap, pasta and the proxy but NOT iptables — so a
+        # machine with no iptables passed the self-check while every task ran in a
+        # netns with no OUTPUT DROP. Boot must surface it.
+        monkeypatch.setenv("OC_BWRAP_SANDBOX", "0")
+        monkeypatch.delenv("OC_EGRESS_NETNS", raising=False)  # default on
+        monkeypatch.setenv("OC_EGRESS_PROXY", "http://127.0.0.1:8889")
+        monkeypatch.setattr(
+            "operations_center.entrypoints.board_worker.netns.pasta_path",
+            lambda: "/usr/bin/pasta",
+        )
+        monkeypatch.setattr(containment, "_proxy_reachable", lambda url, **kw: True)
+        monkeypatch.setattr(containment, "iptables_path", lambda: None)
+        problems = sbx.verify_containment()
+        assert any("iptables" in p for p in problems)
+
+    def test_iptables_path_falls_back_to_sbin_when_not_on_path(self, monkeypatch, tmp_path):
+        # A minimized worker PATH typically drops /usr/sbin, so shutil.which misses an
+        # installed iptables. The absolute-path fallback is what keeps the probe honest.
+        fake = tmp_path / "iptables"
+        fake.write_text("#!/bin/sh\n")
+        fake.chmod(0o755)
+        monkeypatch.setattr(containment.shutil, "which", lambda _cmd: None)
+        monkeypatch.setattr(containment, "_IPTABLES_SBIN_PATHS", (str(fake),))
+        assert containment.iptables_path() == str(fake)
+        monkeypatch.setattr(containment, "_IPTABLES_SBIN_PATHS", ("/nonexistent/iptables",))
+        assert containment.iptables_path() is None
+
     def test_verify_containment_clean_when_all_disabled(self, monkeypatch):
         monkeypatch.setenv("OC_BWRAP_SANDBOX", "0")
         monkeypatch.setenv("OC_EGRESS_NETNS", "0")

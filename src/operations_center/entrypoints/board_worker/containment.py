@@ -26,6 +26,14 @@ logger = logging.getLogger(__name__)
 # SBX Phase 3 (D-SBX-2): the egress proxy URL for the sandbox's HTTPS egress.
 _EGRESS_PROXY_ENV_FLAG = "OC_EGRESS_PROXY"
 
+# Override for the iptables binary the in-netns egress firewall uses (symmetry with
+# netns.py's OC_PASTA_BIN).
+_IPTABLES_BIN_ENV = "OC_IPTABLES_BIN"
+# iptables normally lives in an sbin dir, which a minimized PATH drops. Probed at its
+# absolute locations too, so availability does not depend on PATH shape.
+_IPTABLES_SBIN_PATHS = ("/usr/sbin/iptables", "/sbin/iptables")
+
+
 class ContainmentRequiredError(RuntimeError):
     """Raised when containment is required (the default) but unavailable.
 
@@ -81,6 +89,12 @@ def verify_containment() -> list[str]:
     if netns_enabled():
         if pasta_path() is None:
             problems.append("egress netns enabled but the pasta binary is not on PATH")
+        if iptables_path() is None:
+            problems.append(
+                "egress netns enabled but no iptables binary was found "
+                "(the in-netns OUTPUT DROP would be skipped, leaving egress on the "
+                "honor system)"
+            )
         url = os.environ.get(_EGRESS_PROXY_ENV_FLAG)
         if not url:
             problems.append(
@@ -96,6 +110,32 @@ def verify_containment() -> list[str]:
 def bwrap_available() -> bool:
     """Check if bwrap (bubblewrap) is available in the PATH."""
     return shutil.which("bwrap") is not None
+
+
+def iptables_path() -> str | None:
+    """The resolved ``iptables`` binary, or ``None`` when absent.
+
+    The in-netns ``OUTPUT DROP`` is the only thing that makes egress confinement
+    STRUCTURAL rather than honor-system (``HTTPS_PROXY``, which a compromised agent
+    can simply ``unset``). Its setup script guarded on a bare ``command -v
+    iptables``, so an absent binary skipped the firewall silently: pasta still built
+    the netns, ``maybe_netns`` still reported success, and the posture read healthy
+    while nothing was enforced. Resolving here — once, absolutely — is what lets the
+    availability probe and the script agree, and lets a missing binary fail closed
+    like every other containment gap.
+    """
+    found = shutil.which(os.environ.get(_IPTABLES_BIN_ENV) or "iptables")
+    if found:
+        return found
+    for candidate in _IPTABLES_SBIN_PATHS:
+        if os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def iptables_available() -> bool:
+    """True when the in-netns egress firewall can actually be installed."""
+    return iptables_path() is not None
 
 
 def _proxy_reachable(url: str, *, timeout: float = 0.5) -> bool:
@@ -131,6 +171,8 @@ def _resolve_egress_proxy(env: dict) -> str | None:
 __all__ = [
     "ContainmentRequiredError",
     "bwrap_available",
+    "iptables_available",
+    "iptables_path",
     "sandbox_enabled",
     "verify_containment",
 ]

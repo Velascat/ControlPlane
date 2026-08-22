@@ -50,6 +50,39 @@ def test_required_by_default_raises_when_no_proxy(monkeypatch):
         netns.maybe_netns(["bwrap", "x"], proxy_url=None, enabled=True)
 
 
+def test_required_by_default_raises_when_iptables_missing(monkeypatch):
+    # The regression this gate exists for: pasta and the proxy were both healthy, so
+    # maybe_netns reported success and built the netns — but the firewall block guarded
+    # on a bare `command -v iptables`, found nothing, and skipped the OUTPUT DROP. The
+    # netns had UNRESTRICTED egress while the posture read clean. Absence must now fail
+    # closed exactly like a missing pasta.
+    monkeypatch.setattr(netns, "pasta_path", lambda: "/usr/bin/pasta")
+    monkeypatch.setattr(netns, "iptables_path", lambda: None)
+    monkeypatch.delenv("OC_EGRESS_REQUIRED", raising=False)
+    with pytest.raises(netns.EgressContainmentRequiredError, match="iptables_unavailable"):
+        netns.maybe_netns(["bwrap", "x"], proxy_url="http://127.0.0.1:8889", enabled=True)
+
+
+def test_missing_iptables_fails_open_when_opted_out(monkeypatch):
+    monkeypatch.setattr(netns, "pasta_path", lambda: "/usr/bin/pasta")
+    monkeypatch.setattr(netns, "iptables_path", lambda: None)
+    monkeypatch.setenv("OC_EGRESS_REQUIRED", "0")
+    cmd = ["bwrap", "x"]
+    assert netns.maybe_netns(cmd, proxy_url="http://127.0.0.1:8889", enabled=True) == cmd
+
+
+def test_firewall_script_uses_the_resolved_absolute_iptables_path(monkeypatch):
+    # iptables lives in an sbin dir the worker's minimized PATH does not carry, so a
+    # bare `iptables` inside the script could fail to resolve even when installed.
+    # The caller-resolved absolute path must be what the script actually invokes.
+    monkeypatch.setattr(netns, "pasta_path", lambda: "/usr/bin/pasta")
+    monkeypatch.setattr(netns, "iptables_path", lambda: "/usr/sbin/iptables")
+    out = netns.maybe_netns(["x"], proxy_url="http://127.0.0.1:8889", enabled=True)
+    script = out[out.index("-c") + 1]
+    assert "IPT=/usr/sbin/iptables" in script
+    assert "OUTPUT DROP" in script
+
+
 def test_explicit_opt_out_fails_open(monkeypatch):
     monkeypatch.setattr(netns, "pasta_path", lambda: None)
     monkeypatch.setenv("OC_EGRESS_REQUIRED", "0")
@@ -59,6 +92,7 @@ def test_explicit_opt_out_fails_open(monkeypatch):
 
 def test_enabled_wraps_with_pasta(monkeypatch):
     monkeypatch.setattr(netns, "pasta_path", lambda: "/usr/bin/pasta")
+    monkeypatch.setattr(netns, "iptables_path", lambda: "/usr/sbin/iptables")
     monkeypatch.delenv("OC_EGRESS_NETNS_PORTS", raising=False)
     out = netns.maybe_netns(["bwrap", "exec"], proxy_url="http://127.0.0.1:8889", enabled=True)
     assert out[0] == "/usr/bin/pasta"
@@ -80,6 +114,7 @@ def test_drop_caps_false_omits_capdrop_but_keeps_firewall(monkeypatch):
     # its namespaces (the two SBX layers would compose fail-CLOSED). The egress
     # firewall must STILL be applied.
     monkeypatch.setattr(netns, "pasta_path", lambda: "/usr/bin/pasta")
+    monkeypatch.setattr(netns, "iptables_path", lambda: "/usr/sbin/iptables")
     out = netns.maybe_netns(
         ["bwrap", "exec"], proxy_url="http://127.0.0.1:8889", enabled=True, drop_caps=False
     )
@@ -93,6 +128,7 @@ def test_drop_caps_true_includes_capdrop(monkeypatch):
     # Non-sandboxed payload running DIRECTLY in the netns: the cap-drop is what stops
     # the payload flushing the firewall, so it MUST be present (and is the default).
     monkeypatch.setattr(netns, "pasta_path", lambda: "/usr/bin/pasta")
+    monkeypatch.setattr(netns, "iptables_path", lambda: "/usr/sbin/iptables")
     out = netns.maybe_netns(
         ["python3", "x"], proxy_url="http://127.0.0.1:8889", enabled=True, drop_caps=True
     )
@@ -102,6 +138,7 @@ def test_drop_caps_true_includes_capdrop(monkeypatch):
 
 def test_extra_ports_forwarded(monkeypatch):
     monkeypatch.setattr(netns, "pasta_path", lambda: "/usr/bin/pasta")
+    monkeypatch.setattr(netns, "iptables_path", lambda: "/usr/sbin/iptables")
     monkeypatch.setenv("OC_EGRESS_NETNS_PORTS", "9000, 9001")
     out = netns.maybe_netns(["x"], proxy_url="http://127.0.0.1:8889", enabled=True)
     assert "9000" in out and "9001" in out

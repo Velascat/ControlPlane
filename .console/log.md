@@ -1,77 +1,103 @@
-## 2026-08-22 — choosing a merge method must not be able to stop a merge
+## 2026-08-22 — this branch had quietly reverted the containment fix
 
-Review of #17 caught a defect I introduced while fixing one. The method chooser
-was placed INSIDE the `try` that guards the merge:
+Merging `main` into this branch resolved several conflicts by keeping the
+branch's older side, which undid PR #18 wholesale: `scripts/install-system-deps.sh`
+deleted entirely (192 lines), the iptables fail-closed gate stripped out of
+`containment.py`, `netns.py` reverted, and three tests lost from
+`test_netns.py`. Nothing failed. CI was green on the branch, because the tests
+that would have caught it were themselves among the things deleted.
 
-    try:
-        _method = _merge_method_for(...)
-        gh_client.merge_pr(..., merge_method=_method)
-    except Exception:
-        logger.error("merge failed ...")
-        return
+Restored every file this branch has no business touching to `main`'s version.
+What remains is the five files the change is actually about: `.gitattributes`,
+`pr_client.py`, `pr_review_watcher/main.py` and the two test files.
 
-So any failure while *selecting* a method aborted the *merge*. Nineteen tests
-surfaced it as `'>' not supported between instances of 'MagicMock' and 'int'`,
-but the mock was only the messenger: in production any API hiccup or unexpected
-response shape does the same thing, and the PR silently does not merge while the
-log says "merge failed".
+This is the third time in two days that a merge has silently discarded work
+while reporting success -- first the squash that dropped a merge parent, then a
+union rule that covered the wrong file, now a conflict resolution that reverted
+a merged PR. The common thread is that the destructive outcome and the correct
+one are indistinguishable from the tool's exit status. A diff that touches files
+outside a change's stated scope is worth reading before it lands, every time.
 
-That is the same shape as the bug the PR exists to fix. A guard that can block
-the operation it protects is worse than no guard, because the failure is silent
-and looks like something else. Two changes: selection now happens before the
-`try`, so it cannot abort the merge; and the chooser validates the TYPE it gets
-back, not just the call, falling back to the repo default with a WARNING. A
-wrong-but-safe method is recoverable. A merge that never happens is what we
-spent two days on.
+## 2026-08-22 — containment branch caught up to main, and the merge that could have eaten a live hotpatch
 
-Also updated `test_phase1_skips_empty_diff`, which encoded the old contract, to
-pin the new one: an empty-diff PR must be reviewed rather than skipped, and is
-told it changes no files rather than handed an empty string. Renamed so the
-name states the contract instead of contradicting it.
+Merged `origin/main` (218d11eb, all four of #13/#15/#10/#9 landed) into
+`fix/containment-iptables-gate`. Clean — no conflicts, `.console/backlog.md` and
+`.console/log.md` both auto-merged. The union driver was added to
+`.git/info/attributes` as instructed but was not needed.
 
-## 2026-08-22 — four ways the fleet could not see what it was doing
+The part worth recording is what nearly went wrong. `~/GitHub/OperationsCenter`
+carries an UNCOMMITTED hotpatch to `pr_review_watcher/main.py` (the
+`OC_MERGE_METHOD` override that stops ancestry PRs being squashed), and this merge
+wanted to write that same file — main had picked up #9's corrected `fail-CLOSED`
+comment ~550 lines above the hotpatch. Git refuses a merge that would overwrite
+local changes, so the naive fixes are `git checkout -- <file>` (silently destroys
+the hotpatch) or `git add -A` (silently commits it into an unrelated PR). Both were
+avoided:
 
-PR #14 reconciled github/main into the forge so the push mirror could
-fast-forward. It merged, returned 200, and destroyed the exact property it
-delivered: `merge_method` was hard-coded to `"squash"`, which collapsed the
-merge to one parent. `git merge-base --is-ancestor github/main origin/main`
-went back to false and nobody noticed for hours, because the only way to see it
-is to count parents after the fact. #13 then went the same way.
+1. `git diff -- <file> > /tmp/hotpatch.diff` plus a full copy of the file,
+2. drop the working-tree change, merge, then `git apply` the patch back,
+3. verify the split: index holds main's clean version (0 occurrences of
+   `OC_MERGE_METHOD`), working tree holds the patch (2). The commit therefore
+   cannot carry it, and the running fleet still gets it.
 
-Four fixes, one theme — the fleet acting on assumptions it never checked.
+On the window where the file briefly lacked the patch: a running Python process
+does not re-read a module from disk, so the watcher (holding it in memory) was
+never affected. Only a restart inside those seconds would have mattered, and the
+sole open PR is #16 — a content scrub whose value is not its second parent, so a
+squash of it would have been harmless anyway.
 
-**The merge method now follows the head, not an operator's memory.** A hotpatch
-made it read `OC_MERGE_METHOD`, which works but has to be remembered, is
-process-wide, and reverts on any restart that drops the variable. The head's
-parent count is the actual signal: if the head is itself a merge, squashing
-discards its ancestry, so squash is refused there and used everywhere else. The
-`subject (#N)` convention is unchanged for ordinary PRs. The override remains.
-Where the parent count cannot be determined it still squashes — but says so at
-WARNING, because that is the case that silently does damage.
+This is the same trap as the editable-install finding, from the other direction:
+that clone's working tree is simultaneously a git workspace and live production
+code. `git add -A` there is never safe.
 
-**An empty diff no longer means "skip".** `reviewer-verdict` is a REQUIRED
-status and this watcher is its sole producer, so skipping a PR does not defer
-it — it makes it permanently unmergeable while it looks healthy in the UI. An
-ancestry reconciliation changes zero files by design, so the one PR shape that
-most needs merging was the one shape guaranteed never to be reviewed. It is now
-reviewed on its metadata.
+## 2026-08-21 — fix(containment): a missing iptables made egress confinement a no-op
 
-**`.console/backlog.md` gets the union merge driver.** Only `log.md` had it.
-backlog.md is the append-only file that actually conflicted — three PRs stuck
-on that single file simultaneously, none of which the watcher could resolve
-itself. Added to the tracked `.gitattributes` as well as the runtime write.
+Found on this host: `iptables` had never been installed, and nothing in OC installs
+it. The in-netns firewall block in `board_worker/netns.py` guarded on a bare
+`command -v iptables`, so the test failed, the `OUTPUT DROP` was skipped, and the
+pasta netns ran with unrestricted egress. Nothing reported a problem: pasta and the
+egress proxy were both healthy, so `maybe_netns` returned a wrapped command and
+`verify_containment` returned zero problems. The HTTPS_PROXY wiring survived, which
+means egress was back on the honor system — `unset HTTPS_PROXY` plus a raw socket was
+not blocked. That is precisely the hole the netns layer was written to close (#411,
+#423), silently reopened by an absent package.
 
-**The watcher now records what code it is running.** This is the one that cost
-the most: an editable install resolves through a `.pth`, and any PYTHONPATH
-entry precedes it, so *an environment variable decides which checkout
-executes*. A fix was applied to one tree, the watcher restarted, the variable
-confirmed — and it ran the other tree unchanged for six hours while looking
-fixed. Startup now logs module path, commit, dirty flag, effective merge method
-and PYTHONPATH, and warns loudly when running from a dirty tree. Those are
-precisely the four facts that misled three sessions this week.
+Decisions:
 
-What is deliberately not here: the ancestry repair itself (PR #15), and the
-scrub of the private name still on main. Both belong to whoever owns them.
+- **iptables absence now fails closed, like pasta absence.** `containment.iptables_path()`
+  resolves through PATH and then `/usr/sbin`, `/sbin` (the worker's minimized PATH drops
+  sbin dirs, so an *installed* binary was not necessarily findable either);
+  `verify_containment` reports it at boot; `maybe_netns` logs `netns_degraded` with
+  `reason=iptables_unavailable` and raises `EgressContainmentRequiredError` unless the
+  operator opts out. Rejected leaving it fail-open: a netns with no `OUTPUT DROP` is
+  indistinguishable from no netns at all, so it has the same standing as a missing pasta.
+- **The script takes a resolved absolute path.** `_FIREWALL_SETUP` became
+  `_firewall_setup(iptables_bin)`. The probe and the code that actually runs can no
+  longer disagree about what is installed — the shell string had no way to signal back
+  to Python, which is why "the firewall did not apply" was the one containment failure
+  that could not fail closed.
+- **`scripts/install-system-deps.sh` (new, apt-only).** `oc setup` installs uv, provider
+  CLIs and executor backends but has never touched system packages, so bwrap / pasta /
+  iptables / setpriv were hand-installed or absent. The script also probes a real pasta
+  netns after installing: presence is not enforcement, and a host with the binary but
+  without the netfilter modules degrades the same silent way.
+- **Corrected the uid-0 comments.** The pasta netns keeps the caller's uid (with a full
+  capability set — that is what lets it install rules); it is bwrap's *own* user namespace
+  that maps to root. The old comment credited the netns, which implied `IS_SANDBOX=1`
+  could be dropped when `OC_EGRESS_NETNS=0`. It cannot.
+
+Verified on this host: before the rules an outbound connection returns 301, after them
+1.1.1.1:443 and github's raw IP both return 000 with `HTTPS_PROXY` unset, while the
+loopback proxy stays reachable and allowlisted egress through it still works.
+`test_kernel_enforcement_end_to_end` had been auto-skipping wherever iptables was absent
+(its `_HAVE_TOOLS` guard) — it runs and passes now. 396 passed in
+`tests/unit/entrypoints/board_worker/`, `ruff check` clean.
+
+**Update, same day.** Merged current `origin/main` into the branch before opening the
+PR (clean — `.console/backlog.md` and `.console/log.md` both auto-merged, no union
+driver needed). This entry was originally appended at the BOTTOM of this file, next to
+the rotated 2026-06 entries; the file is newest-first, so it has been moved to the top
+where it belongs. Nothing about the entry's content changed.
 ## 2026-08-22 — a private name in the log was blocking every push
 
 `.console/log.md` carried a managed repo's name in a 2026-08-20 entry. The
