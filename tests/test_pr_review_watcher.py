@@ -531,17 +531,30 @@ def test_phase1_no_verdict_escalates_keeps_pr_open(tmp_path: Path) -> None:
     assert loaded["no_verdict_passes"] == 0  # reset to keep retrying
 
 
-def test_phase1_skips_empty_diff(tmp_path: Path) -> None:
+def test_phase1_reviews_empty_diff_instead_of_skipping(tmp_path: Path) -> None:
+    """An empty diff must still be REVIEWED, not skipped.
+
+    reviewer-verdict is a REQUIRED status and this watcher is its only
+    producer, so skipping does not defer a PR — it makes it permanently
+    unmergeable while it still looks healthy. An ancestry reconciliation
+    changes no files by design, so the shape that most needs merging was the
+    one shape guaranteed never to be reviewed.
+    """
     state, sp = _make_state(tmp_path, phase="self_review")
     gh = _make_gh()
     gh.get_pr_diff.return_value = ""
 
     with patch.object(watcher, "_run_direct_review") as mock_review:
+        # the reviewer returns a dict; CONCERNS keeps this test off the merge path
+        mock_review.return_value = {"result": "CONCERNS", "failing_checks": ["code_quality"]}
         watcher._phase1(
             state, sp, _pr_data(), gh, "owner", "repo", tmp_path, tmp_path / "cfg.yaml", SETTINGS
         )
 
-    mock_review.assert_not_called()
+    mock_review.assert_called_once()
+    # the reviewer is told the PR changes nothing, rather than handed ""
+    assert "changes no files" in mock_review.call_args.args[1]
+    # and a non-LGTM verdict must still not merge it
     gh.merge_pr.assert_not_called()
 
 

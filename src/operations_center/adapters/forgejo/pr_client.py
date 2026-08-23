@@ -134,6 +134,20 @@ class ForgejoPRClient:
         # key GitHub callers look at.
         return {"merged": True}
 
+    def commit_parent_count(self, owner: str, repo: str, sha: str) -> int | None:
+        """Number of parents of ``sha``, or None if it cannot be determined.
+
+        Used to decide whether squashing is safe: squashing a head that is
+        itself a merge collapses its parents, which silently discards whatever
+        ancestry the pull request existed to establish.
+        """
+        try:
+            data = self._request("GET", f"/repos/{owner}/{repo}/git/commits/{sha}").json()
+        except Exception:
+            return None
+        parents = data.get("parents")
+        return len(parents) if isinstance(parents, list) else None
+
     def close_pr(self, owner: str, repo: str, pr_number: int) -> dict:
         return self._request(
             "PATCH", f"/repos/{owner}/{repo}/pulls/{pr_number}", json={"state": "closed"}

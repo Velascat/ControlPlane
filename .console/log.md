@@ -19,6 +19,25 @@ backlog if anywhere. Line numbers were re-derived against current `main` rather
 than copied; several had drifted by two or three lines.
 
 Everything recorded was checked against the tree it names.
+## 2026-08-22 — this branch had quietly reverted the containment fix
+
+Merging `main` into this branch resolved several conflicts by keeping the
+branch's older side, which undid PR #18 wholesale: `scripts/install-system-deps.sh`
+deleted entirely (192 lines), the iptables fail-closed gate stripped out of
+`containment.py`, `netns.py` reverted, and three tests lost from
+`test_netns.py`. Nothing failed. CI was green on the branch, because the tests
+that would have caught it were themselves among the things deleted.
+
+Restored every file this branch has no business touching to `main`'s version.
+What remains is the five files the change is actually about: `.gitattributes`,
+`pr_client.py`, `pr_review_watcher/main.py` and the two test files.
+
+This is the third time in two days that a merge has silently discarded work
+while reporting success -- first the squash that dropped a merge parent, then a
+union rule that covered the wrong file, now a conflict resolution that reverted
+a merged PR. The common thread is that the destructive outcome and the correct
+one are indistinguishable from the tool's exit status. A diff that touches files
+outside a change's stated scope is worth reading before it lands, every time.
 
 ## 2026-08-22 — containment branch caught up to main, and the merge that could have eaten a live hotpatch
 
