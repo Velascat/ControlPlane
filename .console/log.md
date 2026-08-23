@@ -4823,6 +4823,44 @@ Full suite: 10348 passed, 6 failed (same pre-existing sandbox/timing baseline as
 prior stage), 21 skipped, 2 xfailed — zero new failures. `ruff check`/`ruff format --check`
 clean on the new file. Nothing committed yet.
 
+## 2026-08-23 — chore: track four Claude subagent definitions in .claude/agents/
+
+Added `.claude/agents/{oc-locator,oc-test-runner,oc-lint-fixer,oc-console-scribe}.md` and a
+"Delegation Policy" section in `CLAUDE.md`. These define bounded subagents a lead session
+dispatches instead of doing the reading itself, so the lead's context window survives long
+sessions. They sit alongside the ContextGuard hooks already tracked under `.claude/`.
+
+Decision — tracked in the repo rather than left in operator-level `~/.claude/agents/`. The
+knowledge they encode is repo truth (the `entrypoints/` layout, the strict pytest markers,
+the per-file ruff ignores, the `.hooks/pre-commit` log guard), so it belongs under version
+control where the fleet and any other clone pick it up. Cost of that choice: the definitions
+had to be generalized off absolute `/home/void/...` paths, and they now replicate to the
+public GitHub mirror via the Forgejo push mirror.
+
+Deliberately excluded — a fifth agent covering git-state checks (branch policy, worktree
+collisions, hook wiring, reviewer-watcher squash hazard) stays operator-local and untracked.
+It describes the Forgejo topology and the watcher's auto-merge behavior in enough detail
+that mirroring it to a public repo was judged not worth the convenience.
+
+`oc-test-runner` is deliberately given no write tools. An agent that can both run tests and
+edit code can report success it caused rather than observed; withholding Edit/Write is what
+makes its pass/fail claim worth anything.
+
+Two repo facts worth recording, both found while doing this. `CLAUDE.md` is listed in
+`.gitignore` but is tracked — it was committed before the rule was added, so the rule is
+inert and edits to it are real repo changes. And the primary checkout was sitting on `main`
+at the start of this work, not on the feature branch it was on earlier in the day; nothing
+moved it deliberately, so the fleet may switch it. Confirm the branch before editing.
+
+Verified every tool the definitions assert before committing, and one was wrong: `oc-locator`
+originally said to prefer `rg`, but ripgrep is not installed in this environment, so an agent
+shelling out to it would have failed. Reworded to direct at the ripgrep-backed Grep tool, with
+`grep -rn` as the Bash fallback. The rest checked out — `.venv/bin/ruff` exists, `pytest-xdist`
+imports (so the `-n auto --dist=loadscope` guidance is valid), and all 10 `custodian-*` binaries
+are present.
+
+No source changed; no tests run. `.claude/agents/` is configuration, not importable code.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:
