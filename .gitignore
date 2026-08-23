@@ -7,6 +7,8 @@
 !.console/validation/**
 # P3: OC-local operational config and runtime state (migrated from .context/)
 !.console/workers.yaml
+!.console/sessions.md
+!.console/working-structure.md
 # console-reconciliation: worksheet + any local archive staging stay untracked
 /.console/reconcile.yaml
 /.console/archive/

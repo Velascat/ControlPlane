@@ -1,31 +1,3 @@
-## 2026-08-23 — two of the "reverts" I recorded never happened
-
-A peer session pushed back on a warning I sent it: I had told it PR #23 would
-delete the mirror-cadence section, and it declined to act, arguing the finding
-was a diff-range artifact. It was right, and I reproduced its result before
-accepting it — `git merge-tree --write-tree` produces a tree in which the section
-is present and `MIRROR-ANCESTRY.md` is byte-identical to main's.
-
-The error: `git diff origin/main BRANCH` reports differences in BOTH directions,
-so a file changed on main since the branch was cut appears as though the branch
-deleted it. Three-way merge keeps main's side for files the branch never touched.
-Three-dot (`origin/main...BRANCH`) answers "what does this branch change"; two-dot
-does not.
-
-Re-testing my earlier claims the same way, PR #20 was a false positive too — the
-audit entry survives in the merged tree. I had reported that one as a caught
-near-miss. Two of the four "reverts" I recorded were my own measurement error.
-
-What survives: #14's squash really did drop a merge parent (verified by parent
-count on the merge commit), and #17 really did revert #18 — `install-system-deps.sh`
-is 192 lines in that commit's parent and 0 in the commit itself, a deletion inside
-the commit rather than an artifact of comparing against main.
-
-Item 8's remedy is corrected here, because it recommended the broken check. The
-irony is exact: an audit about substituting a cheap observable for the expensive
-fact recommended a cheap observable that does not answer the question. Simulating
-the merge is the expensive fact.
-
 ## 2026-08-23 — the reviewer was throwing away its own reason for saying no
 
 `verdict.py`'s `failing_summary()` exists to make a CONCERNS actionable: it
@@ -4987,6 +4959,60 @@ RepoGraph has no manifests registered rather than that the documented flow is wr
 an architectural call, not a docs fix, so it is flagged rather than rewritten.
 
 No source changed; no tests run. Documentation only.
+
+## 2026-08-23 — docs: adopt the two-lead working structure, with three traps verified here
+
+Added `.console/sessions.md` (session registry) and `.console/working-structure.md` (layer
+model and standing rules), adapted from a sibling internal deployment. Every inherited rule is
+marked as inherited; rules confirmed against this repo cite what established them. One
+inherited rule was already found to be wrong here, which is why the provenance marking exists
+rather than a clean copy.
+
+**Addressing is inverted from the sibling deployment's finding.** Session IDs and addressable names are
+unrelated namespaces. The same peer session is `local_23b52e6d-…` to `list_sessions` and to
+the inbound message envelope, but `github-72` to `ListAgents`. `SendMessage` REJECTED the
+`local_…` form and accepted the bare listing name. That deployment recorded the opposite — that
+replying to the message envelope was what got through. The lesson (never derive an address
+from an ID) generalises; the specific working address does not, so the registry records which
+one works here and why.
+
+**`.console/*` ignores by default, and whether you are told depends on how you add.** Probed
+it rather than assuming: `git add .console/newfile.md` warns and does not stage;
+`git add .console/` and `git add -A` produce no output at all and do not stage. The bulk forms
+are what a script or an agent fix pass runs. Both new files here needed `!` negations, and the
+first `git add` of them staged zero — reproduced deliberately before fixing, so the entry is
+describing an observation rather than a prediction. An earlier draft of the doc claimed the
+skip was silent in all cases; corrected before commit.
+
+**23 tracked files are shadowed by an inert ignore rule.** `git ls-files | git check-ignore
+--stdin --no-index -v` lists them. `CLAUDE.md` is one — listed in `.gitignore` but committed
+before the rule, so the rule does nothing and edits to it are real repo changes reaching the
+public mirror. Broad patterns (`STAGE_*.md`, `AUDIT*.md`, `*_ANALYSIS.md`) shadow ~15 files
+under `docs/history/stages/`, so new documents of those shapes will not be added either.
+
+Also recorded the merge-reasoning rule that came out of the #23 dispute: reason about a merge
+by simulating it with `git merge-tree --write-tree`, never by reading any `git diff`. A peer
+lead reported #23 would delete 44 lines from `deploy/forgejo/MIRROR-ANCESTRY.md`, diagnosed
+from a two-dot diff, which reports files `main` changed as though the branch had changed them.
+The merged blob was byte-identical to main's. Re-examination found the same error had produced
+a second false positive on #20 that had already been reported to the operator, and that two of
+the four incidents in the silent-failure audit were the diagnostic misfiring.
+
+Not done, and needs the operator: the second lead session cannot be started from inside a
+session, and role assignment for the existing peer is not mine to make. The registry's role
+column reflects what each session has actually been doing, not an assignment.
+
+Not audited: the "guard defeated by the thing it guards against" rule is carried over
+untested. `grep -rn "loudly\|LOUD" src/` returns eight candidate sites.
+
+**The pre-push custodian gate caught a private name before it reached the forge.** The first
+draft of both new files named a sibling private project. Custodian `RC2` blocks scrub-target
+names in this repo's tracked `.console/**` because the repo mirrors publicly, and the push was
+rejected with 5 MED findings. Scrubbed to descriptions rather than names; audit re-run clean
+before retrying. Recorded as a trap in `working-structure.md` — the constraint is not
+documented in `guidelines.md` and there is no way to discover it except by hitting it.
+
+No source changed; no tests run. Documentation and one `.gitignore` negation pair.
 
 ---
 
