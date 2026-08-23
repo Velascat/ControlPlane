@@ -1,3 +1,25 @@
+## 2026-08-23 — writing down the pattern, not just the nine bugs
+
+Three days of forge migration produced three separate merges that discarded work
+while reporting success: a squash that dropped a merge parent, a union driver
+registered for the wrong file, and a conflict resolution that reverted a PR
+merged an hour earlier. Recorded the audit in `.console/backlog.md` because the
+pattern generalises better than the instances — each defect substitutes a cheap
+observable for the expensive fact, and reports the cheap one when they diverge.
+
+Two items were corrected before recording. The audit claimed `docs/`, `fix/`,
+`chore/` and `ci/` branches skip the settled-CI precondition; the code at
+`main.py:3202` says the opposite — `auto_merge_on_ci_green` is restricted TO the
+autonomy prefixes, and everything else falls through to the stricter
+verdict-gated path. The real (milder) finding is that a naming convention
+carries a merge-policy difference nothing validates. The second claim, a
+disclosure gate failing open in `_repo_is_public`, could not be verified: no
+such symbol exists in this repository, so it belongs in the custodian tooling's
+backlog if anywhere. Line numbers were re-derived against current `main` rather
+than copied; several had drifted by two or three lines.
+
+Everything recorded was checked against the tree it names.
+
 ## 2026-08-22 — containment branch caught up to main, and the merge that could have eaten a live hotpatch
 
 Merged `origin/main` (218d11eb, all four of #13/#15/#10/#9 landed) into
