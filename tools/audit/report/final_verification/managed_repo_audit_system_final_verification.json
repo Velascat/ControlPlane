@@ -46,7 +46,7 @@
     { "phase": "Phase 2", "name": "Artifact Contract Definition", "status": "complete", "test_count": 119, "notes": "ManagedArtifactManifest, ManagedRunStatus; incl. in Phase 1+3 counts" },
     { "phase": "Phase 3", "name": "Audit Toolset Contract", "status": "complete", "test_count": 47, "notes": "Commands, discovery, contract validation" },
     { "phase": "Phase 4", "name": "Run Identity / ENV Injection", "status": "complete", "test_count": 52, "notes": "prepare_managed_audit_invocation(); AUDIT_RUN_ID injection" },
-    { "phase": "Phase 5", "name": "VideoFoundry Producer Contract", "status": "complete", "test_count": 6, "notes": "All 6 VF audit CLIs wired: 5 ManagedRunFinalizer + 1 _RunStatusFinalizer+ManagedManifestWriter; verified by integration tests" },
+    { "phase": "Phase 5", "name": "managed-repo Producer Contract", "status": "complete", "test_count": 6, "notes": "All 6 VF audit CLIs wired: 5 ManagedRunFinalizer + 1 _RunStatusFinalizer+ManagedManifestWriter; verified by integration tests" },
     { "phase": "Phase 6", "name": "Dispatch-Orchestrated Run Control", "status": "complete", "test_count": 94, "notes": "dispatch_managed_audit(); per-repo lock; lifecycle discovery; escape-hatch bypass documented" },
     { "phase": "Phase 7", "name": "Artifact Index + Retrieval", "status": "complete", "test_count": 78, "notes": "load_artifact_manifest(); build_artifact_index(); sole entry point" },
     { "phase": "Phase 8", "name": "Behavior Calibration", "status": "complete", "test_count": 102, "notes": "Analyzer, rules, guardrails; 35 anti-collapse tests included; calibration_report.schema.json added (gap_r6_002 closed)" },
@@ -67,7 +67,7 @@
       "id": 2,
       "name": "Contract Ownership",
       "status": "verified",
-      "evidence": "All schemas and Pydantic models in src/operations_center/; schemas/ contains run_status, artifact_manifest, fixture_pack, governance_report; no VideoFoundry-side contract files"
+      "evidence": "All schemas and Pydantic models in src/operations_center/; schemas/ contains run_status, artifact_manifest, fixture_pack, governance_report; no managed-repo-side contract files"
     },
     {
       "id": 3,
@@ -216,7 +216,7 @@
   "suggested_followup_tasks": [
     {
       "id": "followup_001",
-      "title": "First live VideoFoundry audit run",
+      "title": "First live managed-repo audit run",
       "description": "Execute operations-center-governance run against a real live VF instance to validate Phase 5 producer outputs conform to the run_status.json and artifact_manifest.json contracts.",
       "priority": "medium",
       "status": "open"
@@ -251,7 +251,7 @@
     { "id": "gap_009", "description": "No JSON schema for fixture packs", "revision": 1, "status": "closed", "closure": "schemas/fixture_harvesting/fixture_pack.schema.json" },
     { "id": "gap_010", "description": "Documentation polish", "revision": 1, "status": "closed", "closure": "Docstrings + architecture doc updates" },
     { "id": "gap_011", "description": "dispatched_run_id not accessible", "revision": 1, "status": "closed", "closure": "@property dispatched_run_id on AuditGovernanceReport" },
-    { "id": "gap_r2_001", "description": "Phase 5 VideoFoundry producer not delivered", "revision": 2, "status": "closed", "closure": "All 6 audit CLIs wired; 6 integration tests" },
+    { "id": "gap_r2_001", "description": "Phase 5 managed-repo producer not delivered", "revision": 2, "status": "closed", "closure": "All 6 audit CLIs wired; 6 integration tests" },
     { "id": "gap_r2_002", "description": "Empty known_audit_types → warning", "revision": 2, "status": "closed", "closure": "Changed to status='failed'" },
     { "id": "gap_r2_003", "description": "AuditGovernanceReport lacks governance_status", "revision": 2, "status": "closed", "closure": "Field added; runner populates all 4 paths" },
     { "id": "gap_r2_004", "description": "file_locks.py Linux/macOS undocumented", "revision": 2, "status": "closed", "closure": "Module docstring updated" },
@@ -309,7 +309,7 @@
     "open_gaps": 0,
     "open_gap_ids": [],
     "remaining_risks": [
-      "First live VideoFoundry audit run not yet executed (low) — fake-producer integration tests validate the contract",
+      "First live managed-repo audit run not yet executed (low) — fake-producer integration tests validate the contract",
       "fcntl file locking is Linux/macOS only (low) — documented",
       "mini_regression_first_policy accepts path attestation without file validation — operator-intent-to-bypass risk only; audit trail records the claimed path; attestation model documented by design"
     ],
