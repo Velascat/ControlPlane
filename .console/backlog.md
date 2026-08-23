@@ -4,6 +4,100 @@ _Durable work inventory. Update after each meaningful chunk of progress._
 
 ## Up Next
 
+### Silent-failure audit: nine defects that report success while doing nothing
+
+Findings from the 2026-08-20..23 forge migration, where three separate merges
+discarded work while reporting success. Recorded here because the pattern is
+more useful than the instances: **each defect substitutes a cheap observable for
+the expensive fact, and when the two diverge the system reports the cheap one.**
+"Merged" (HTTP 200) stood in for "history has two parents". "Env var is set"
+stood in for "the running process imports the patched file". "No failing checks"
+stood in for "a required status has a producer that will ever run".
+
+Worth noting most of these were introduced BY fixes. Squash is the right default
+for ordinary PRs; the union driver was added to reduce conflicts; the empty-diff
+skip is an optimisation; the editable install is a development convenience. Each
+is locally correct with a global, silent failure mode. The class is not
+carelessness — it is optimisations whose invariants were never written down.
+
+1. **`merge_method="squash"` is the default at six call sites.**
+   `adapters/forgejo/pr_client.py:126,173`, `adapters/pr/__init__.py:87,113`,
+   `adapters/github_pr.py:129,641`, plus the caller at
+   `entrypoints/pr_review_watcher/main.py:1470`. Fixing one leaves five.
+   Squashing a two-parent head silently drops a parent — PR #14 looked merged
+   and had achieved nothing. Only detectable by counting parents afterwards.
+   The fix that ends it is an assertion, not a remembered variable: refuse
+   squash when the head has more than one parent.
+
+2. **Sole producer of a required status returns silently.**
+   `pr_review_watcher/main.py:1358` — `if not sha: return`, no log, no status.
+   `reviewer-verdict` is a REQUIRED check and this is its only producer, so a
+   correct PR becomes structurally unmergeable while looking healthy. One
+   WARNING line closes it.
+
+3. **Which code runs is decided by an unrecorded path.**
+   `oc-fleet-main/.venv` is an editable install whose `.pth` resolves to
+   `~/GitHub/OperationsCenter/src`. A patch applied to the tree the process
+   *lives in* runs nowhere. Cost six hours of a believed-live fix. The watcher
+   logs `starting — poll_interval=%ds` and no module path, git SHA or dirty
+   flag, so its logs cannot answer "which code is this?".
+
+4. **Verdict flip-flop with an asymmetric budget.** Observed on PR #9: four
+   LGTMs then CONCERNS on unchanged input. The fix pass pushed nothing and
+   still consumed 1 of 6; at 6 the PR is CLOSED. The deeper defect is that
+   **agreement is discarded and disagreement retained** — the LGTMs expired
+   unused while CI was pending, the outlier persisted. Fix first: a fix pass
+   that pushes no changes must not consume an attempt. That turns "auto-closed
+   by coin flips" into "stuck, visibly".
+
+5. **A branch-name prefix carries a merge-policy difference.**
+   `main.py:3202` (also `3135`, `3987`) — `auto_merge_on_ci_green` applies only
+   to `goal/`, `test/`, `improve/`, `spec-author/` heads. The behaviour is
+   defensible and the comment argues for it, but the policy lives in a naming
+   convention that nothing validates: a typo in a branch name silently changes
+   which merge rules apply, and no check reports the difference.
+
+6. **Two CI-query swallows.** `main.py:3182` and `4029` — `except Exception:
+   pass` around CI status lookups. An API failure becomes indistinguishable
+   from a definite answer. Same defect already fixed at a fourth site in #8.
+
+7. **CI and the pre-push hook disagree on identical input.**
+   `.forgejo/workflows/custodian-audit.yml:75` skips the boundary artifact when
+   `REPOGRAPH_BOUNDARY_ARTIFACT_B64` is unset ("graceful: skip if absent"),
+   while `.hooks/pre-push` fails CLOSED on the same condition. Two gates, one
+   input, opposite verdicts — and the disclosure finding that blocked every
+   local push for a day was invisible to CI throughout.
+
+8. **`git add -A` can revert merged work with CI staying green.** A commit on
+   PR #17's branch deleted `scripts/install-system-deps.sh` entirely and
+   reverted the containment, netns and sandbox changes — 449 deletions across
+   six files the author never touched — undoing PR #18, which had merged an
+   hour earlier. The mechanism was not conflict resolution: `git add -A`
+   records deletions as faithfully as edits, and the commit summary ("10 files
+   changed") was read without reading the file list. CI passed, necessarily —
+   the tests that would have failed were among the deletions.
+   `git add -A` is not a safe default on a tree several agents are moving files
+   around in; stage explicit paths, or read the file list rather than the
+   summary. A check comparing a PR's touched files against its stated scope
+   catches it in seconds either way.
+
+9. **`watch-stop` reports success without stopping the process.** Observed
+   twice, from two different roots; the watcher had to be killed by PID. "I
+   stopped the fleet" is not currently a fact you can rely on.
+
+Common remedy for 1, 2, 3 and 9: make the authoritative check the one the
+system performs, and log what it found. Record module path, git SHA, dirty flag
+and effective merge method at startup; assert the parent count before merging;
+confirm process death after a stop.
+
+One further item could not be verified and is left out deliberately: an audit
+claim that the disclosure gate fails open when it cannot resolve a sibling
+manifest (`_repo_is_public`). No such symbol exists in this repository, so if
+the behaviour is real it lives in the custodian tooling and belongs in that
+repo's backlog, not this one. The observable symptom is real and item 7 records
+it.
+
+
 ### The watchdog prompts point at a home directory that does not exist
 
 `.console/watchdog_loop_prompt.md` and `.console/haiku_collector_prompt.md` both
