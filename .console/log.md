@@ -26,6 +26,35 @@ irony is exact: an audit about substituting a cheap observable for the expensive
 fact recommended a cheap observable that does not answer the question. Simulating
 the merge is the expensive fact.
 
+## 2026-08-23 — the reviewer was throwing away its own reason for saying no
+
+`verdict.py`'s `failing_summary()` exists to make a CONCERNS actionable: it
+attaches each failing check's quoted `evidence_span` so the auto-fix worker has
+something to act on. Its docstring is explicit — "without it, the auto-fix worker
+receives only 'code_quality' and no-ops, looping the PR to exhaustion." It is
+called correctly.
+
+`_phase1` then discarded the result and rebuilt a bare comma-joined check-id
+list, in exactly the CONCERNS case where the detail matters. So the fix pass got
+"code_quality", could do nothing, pushed nothing — and still spent an attempt
+against the budget that CLOSES the PR at exhaustion. PR #9 came within one
+verdict flip of being auto-closed that way, and the reason was unrecoverable
+afterwards: the raw verdict.json lives in a temp workdir that is cleaned up.
+
+The guard being defended was real but aimed at the wrong place. By the time a
+verdict reaches this point its summary is code-composed — by `failing_summary()`
+from sanitized spans, or by the council consolidator — not model prose. And
+every path that reflects it outward already passes it through
+`sanitize_for_comment()` where it is posted. Blanking it here bought nothing and
+cost the only thing that made a CONCERNS debuggable.
+
+Now: keep the composed summary, fall back to the check-id list only when there
+is nothing richer. Two regression tests; the first was confirmed to fail against
+the old behaviour before being kept, and its failing run reproduces the symptom
+verbatim — "fix pass for PR #42 pushed no changes (attempt 1/2)".
+
+Found by the session that owns PR #20, which hit an undebuggable `code_quality`
+CONCERNS on a Markdown-only change and traced why the reason had vanished.
 ## 2026-08-23 — how often the mirror actually runs, written down
 
 The mirror's cadence had never been established — only that it sometimes failed.
@@ -4929,6 +4958,35 @@ imports (so the `-n auto --dist=loadscope` guidance is valid), and all 10 `custo
 are present.
 
 No source changed; no tests run. `.claude/agents/` is configuration, not importable code.
+
+## 2026-08-23 — fix: the delegation policy told sessions to anchor with a command that fails
+
+The "Delegation Policy" section added in #20 instructed operators to run
+`eval $(cl session start PlatformManifest)` before dispatching subagents. That command does
+not work here: RepoGraph has no manifests registered, so it exits with
+`manifest 'PlatformManifest' is not registered with RepoGraph. Known: []`. The instruction
+was copied from the Cognition Lifecycle section above it and never executed before shipping.
+
+Replaced with what `scripts/operations-center.sh:44-52` actually does — export `CL_ANCHOR`
+at any sibling manifest directory containing `.context/`, then launch. That script's own
+comment records why it is sufficient: `cl_dispatch_wrap` activates and no-ops gracefully
+without an active CL session, catching `SessionNotStarted`.
+
+Also documented a trap found while testing: **the ContextGuard hook blocks the anchoring
+command itself.** An unanchored session that tries to run `cl session start` to fix its own
+state is blocked by the very hook it is trying to satisfy, so the anchor must exist in the
+environment that launches Claude Code. Verified empirically — a headless session in the repo
+with `CL_ANCHOR` unset had `echo $CL_ANCHOR`, `cl session start`, and its subagent dispatch
+all blocked in sequence; the same session with `CL_ANCHOR` exported dispatched `oc-locator`
+successfully and returned a correct, line-accurate answer.
+
+Left alone deliberately — the Cognition Lifecycle section (CLAUDE.md line 25) carries the
+same `eval $(cl session start ...)` instruction and is equally unfollowable today. It cites
+ADR 0002 P3, so it may be describing intended architecture where the real defect is that
+RepoGraph has no manifests registered rather than that the documented flow is wrong. That is
+an architectural call, not a docs fix, so it is flagged rather than rewritten.
+
+No source changed; no tests run. Documentation only.
 
 ---
 

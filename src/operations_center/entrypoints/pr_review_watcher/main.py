@@ -4002,13 +4002,31 @@ def _phase1(
     # Fail-safe: a missing/malformed verdict computed to CONCERNS upstream.
     result = (verdict.get("result") or CONCERNS).upper()
     failing_checks = verdict.get("failing_checks") or []
-    # The free-text summary is informational only (human comment) — NEVER the
-    # decision. Prefer the code-derived failing-check list so an injected summary
-    # cannot misrepresent the outcome.
+    # The summary is informational only (human comment + fix-pass context) — NEVER
+    # the decision, which stays `result`/`failing_checks` computed above.
+    #
+    # This used to rebuild a bare check-id list here whenever the verdict was
+    # CONCERNS, to stop an injected summary misrepresenting the outcome. That guard
+    # was over-broad and undid the function written to prevent exactly this: by the
+    # time a verdict reaches here its summary is composed by `failing_summary()`
+    # (verdict.py) from each failing check's sanitized `evidence_span`, or by the
+    # council consolidator — it is not model-authored prose. Discarding it left the
+    # auto-fix worker with "code_quality" and nothing else, so it no-opped and
+    # still spent an attempt against the budget that CLOSES the PR at exhaustion.
+    # PR #9 came within a coin-flip of being auto-closed that way, and the reason
+    # was unrecoverable afterwards because the raw verdict.json lives in a temp
+    # workdir that is cleaned up.
+    #
+    # The injection boundary is unaffected: every path that reflects this text
+    # outward passes it through `sanitize_for_comment()` at the point it is posted
+    # (see the concern comment below), not by blanking it here.
+    _composed_summary = str(verdict.get("summary") or "").strip()
     if result == CONCERNS and failing_checks:
-        summary = "Failed checks: " + ", ".join(str(c) for c in failing_checks)
+        summary = _composed_summary or (
+            "Failed checks: " + ", ".join(str(c) for c in failing_checks)
+        )
     else:
-        summary = str(verdict.get("summary") or "(no summary)")
+        summary = _composed_summary or "(no summary)"
 
     _dispatch_verdict_outcome(
         state,
