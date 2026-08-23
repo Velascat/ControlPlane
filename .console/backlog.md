@@ -78,8 +78,26 @@ carelessness — it is optimisations whose invariants were never written down.
    the tests that would have failed were among the deletions.
    `git add -A` is not a safe default on a tree several agents are moving files
    around in; stage explicit paths, or read the file list rather than the
-   summary. A check comparing a PR's touched files against its stated scope
-   catches it in seconds either way.
+   summary.
+
+   **Use the right check — the obvious one is wrong.** Comparing a PR's touched
+   files against its stated scope catches this, but `git diff origin/main HEAD`
+   (two-dot) does NOT answer that question. Two-dot reports differences in both
+   directions, so every file that changed *on main* since the branch was cut is
+   listed as though the branch removed it. On a branch merely behind main this
+   reports deletions that will never happen: git's three-way merge keeps main's
+   side for any file the branch never touched. Use either:
+
+       git diff --name-only origin/main...HEAD        # three-dot: what THIS branch changes
+       git merge-tree --write-tree origin/main HEAD   # simulate the merge, inspect the tree
+
+   The second is stronger, because it answers the question by performing the
+   merge rather than reasoning about it. Not hypothetical: two "reverts"
+   originally recorded in this audit were two-dot artifacts and did not exist.
+   They were removed after a peer session challenged the finding and the merge
+   was simulated. Reasoning about a merge from a diff is the same class of error
+   as the rest of this list — a cheap observable standing in for the expensive
+   fact.
 
 9. **`watch-stop` reports success without stopping the process.** Observed
    twice, from two different roots; the watcher had to be killed by PID. "I
