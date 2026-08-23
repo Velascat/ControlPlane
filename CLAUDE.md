@@ -50,3 +50,28 @@ wake → read <anchor>/.context/sessions/<sid>/checkpoints/<latest>.yaml
 **On session end:** write a LoopCheckpoint to `checkpoints/`. Update any active capsule's `handoff_notes` and `next_actions`. `cl session end` archives the session subdir.
 **Templates:** `<anchor>/.context/templates/`.
 **Config:** `<anchor>/.context/config.yaml` (CL guard flags) and `.console/workers.yaml` (OC operational config).
+
+## Delegation Policy
+
+The session you are talking to is the lead. Prefer dispatching a subagent over doing the reading yourself — a subagent burns its own context window and returns only its conclusion, which is what keeps a long session workable.
+
+**Before dispatching anything:** verify `CL_ANCHOR` is set. The ContextGuard `PreToolUse` hook (`.claude/hooks/pre_tool_use.sh`) blocks *every* tool call when it is unset, and subagents inherit the environment — so an unanchored session means each dispatched agent dies on its first tool call with a block message, which reads as the agent being broken rather than the session being unanchored. If it is unset, run `eval $(cl session start PlatformManifest)` (or `PrivateManifest` for private work) before delegating.
+
+**Who does what** — definitions live in `.claude/agents/`:
+
+| Need | Agent |
+|------|-------|
+| Where does X live, what covers it | `oc-locator` |
+| Does it actually pass | `oc-test-runner` |
+| Clean up before review | `oc-lint-fixer` |
+| `log.md` / `backlog.md` before a commit | `oc-console-scribe` |
+
+Git-state checks before a commit, push, or PR are handled by an operator-local agent that is deliberately not tracked here.
+
+**Lead rules:**
+
+- Write the plan to a file before fanning out. Subagents share nothing but the filesystem — a plan in `.console/task.md` is shared memory; a plan in the lead's conversation is not.
+- Demand evidence, not claims. "Tests pass" from an agent with no Bash access is not a result. `oc-test-runner` exists so that claim arrives with a pytest summary line attached.
+- Give each agent one self-contained assignment with explicit file paths. Subagents cannot ask clarifying questions — ambiguity becomes a confident guess.
+- Never dispatch two writing agents at the same paths concurrently. Reads parallelize freely; writes need either sequencing or separate worktrees.
+- Check git state before any commit, push, or PR — not after. Confirm the branch is not `main`, and remember the reviewer watcher squash-merges PRs once checks go green, which flattens ancestry.
