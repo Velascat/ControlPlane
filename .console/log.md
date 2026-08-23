@@ -1,3 +1,33 @@
+## 2026-08-23 — the reviewer was throwing away its own reason for saying no
+
+`verdict.py`'s `failing_summary()` exists to make a CONCERNS actionable: it
+attaches each failing check's quoted `evidence_span` so the auto-fix worker has
+something to act on. Its docstring is explicit — "without it, the auto-fix worker
+receives only 'code_quality' and no-ops, looping the PR to exhaustion." It is
+called correctly.
+
+`_phase1` then discarded the result and rebuilt a bare comma-joined check-id
+list, in exactly the CONCERNS case where the detail matters. So the fix pass got
+"code_quality", could do nothing, pushed nothing — and still spent an attempt
+against the budget that CLOSES the PR at exhaustion. PR #9 came within one
+verdict flip of being auto-closed that way, and the reason was unrecoverable
+afterwards: the raw verdict.json lives in a temp workdir that is cleaned up.
+
+The guard being defended was real but aimed at the wrong place. By the time a
+verdict reaches this point its summary is code-composed — by `failing_summary()`
+from sanitized spans, or by the council consolidator — not model prose. And
+every path that reflects it outward already passes it through
+`sanitize_for_comment()` where it is posted. Blanking it here bought nothing and
+cost the only thing that made a CONCERNS debuggable.
+
+Now: keep the composed summary, fall back to the check-id list only when there
+is nothing richer. Two regression tests; the first was confirmed to fail against
+the old behaviour before being kept, and its failing run reproduces the symptom
+verbatim — "fix pass for PR #42 pushed no changes (attempt 1/2)".
+
+Found by the session that owns PR #20, which hit an undebuggable `code_quality`
+CONCERNS on a Markdown-only change and traced why the reason had vanished.
+
 ## 2026-08-23 — writing down the pattern, not just the nine bugs
 
 Three days of forge migration produced three separate merges that discarded work
