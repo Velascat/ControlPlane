@@ -4882,6 +4882,35 @@ are present.
 
 No source changed; no tests run. `.claude/agents/` is configuration, not importable code.
 
+## 2026-08-23 — fix: the delegation policy told sessions to anchor with a command that fails
+
+The "Delegation Policy" section added in #20 instructed operators to run
+`eval $(cl session start PlatformManifest)` before dispatching subagents. That command does
+not work here: RepoGraph has no manifests registered, so it exits with
+`manifest 'PlatformManifest' is not registered with RepoGraph. Known: []`. The instruction
+was copied from the Cognition Lifecycle section above it and never executed before shipping.
+
+Replaced with what `scripts/operations-center.sh:44-52` actually does — export `CL_ANCHOR`
+at any sibling manifest directory containing `.context/`, then launch. That script's own
+comment records why it is sufficient: `cl_dispatch_wrap` activates and no-ops gracefully
+without an active CL session, catching `SessionNotStarted`.
+
+Also documented a trap found while testing: **the ContextGuard hook blocks the anchoring
+command itself.** An unanchored session that tries to run `cl session start` to fix its own
+state is blocked by the very hook it is trying to satisfy, so the anchor must exist in the
+environment that launches Claude Code. Verified empirically — a headless session in the repo
+with `CL_ANCHOR` unset had `echo $CL_ANCHOR`, `cl session start`, and its subagent dispatch
+all blocked in sequence; the same session with `CL_ANCHOR` exported dispatched `oc-locator`
+successfully and returned a correct, line-accurate answer.
+
+Left alone deliberately — the Cognition Lifecycle section (CLAUDE.md line 25) carries the
+same `eval $(cl session start ...)` instruction and is equally unfollowable today. It cites
+ADR 0002 P3, so it may be describing intended architecture where the real defect is that
+RepoGraph has no manifests registered rather than that the documented flow is wrong. That is
+an architectural call, not a docs fix, so it is flagged rather than rewritten.
+
+No source changed; no tests run. Documentation only.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:
