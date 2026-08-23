@@ -68,13 +68,18 @@ carelessness — it is optimisations whose invariants were never written down.
    input, opposite verdicts — and the disclosure finding that blocked every
    local push for a day was invisible to CI throughout.
 
-8. **A merge can revert merged work with CI green.** PR #17's branch merged
-   `main` and resolved conflicts by keeping its own older side, deleting
-   `scripts/install-system-deps.sh` entirely and stripping the iptables gate
-   from `containment.py` — undoing PR #18, which had merged an hour earlier.
-   CI passed, necessarily: the tests that would have failed were among the
-   deletions. A check comparing a PR's touched files against its stated scope
-   catches this in seconds.
+8. **`git add -A` can revert merged work with CI staying green.** A commit on
+   PR #17's branch deleted `scripts/install-system-deps.sh` entirely and
+   reverted the containment, netns and sandbox changes — 449 deletions across
+   six files the author never touched — undoing PR #18, which had merged an
+   hour earlier. The mechanism was not conflict resolution: `git add -A`
+   records deletions as faithfully as edits, and the commit summary ("10 files
+   changed") was read without reading the file list. CI passed, necessarily —
+   the tests that would have failed were among the deletions.
+   `git add -A` is not a safe default on a tree several agents are moving files
+   around in; stage explicit paths, or read the file list rather than the
+   summary. A check comparing a PR's touched files against its stated scope
+   catches it in seconds either way.
 
 9. **`watch-stop` reports success without stopping the process.** Observed
    twice, from two different roots; the watcher had to be killed by PID. "I
