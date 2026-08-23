@@ -4196,3 +4196,60 @@ def test_run_council_degraded_quorum_two_of_three_merges_on_unanimity(
     recorded = json.loads(council_path.read_text(encoding="utf-8"))
     assert recorded["degraded_quorum"] is True
     assert recorded["available_members"] == 2
+
+
+# ── Phase 1: a CONCERNS must stay actionable ─────────────────────────────────
+
+
+def test_phase1_concerns_keeps_the_composed_summary(tmp_path: Path) -> None:
+    """The evidence-bearing summary must survive to the fix pass.
+
+    ``failing_summary()`` exists so a CONCERNS is actionable rather than an opaque
+    check id; its docstring says that without it "the auto-fix worker receives only
+    'code_quality' and no-ops, looping the PR to exhaustion". ``_phase1`` used to
+    rebuild a bare check-id list at the dispatch point, discarding it. A fix pass
+    with nothing to act on pushes nothing and STILL spends an attempt against the
+    budget that closes the PR at exhaustion.
+    """
+    state, sp = _make_state(tmp_path, phase="self_review")
+    gh = _make_gh()
+    rich = "code_quality: `if x = 1:` at foo.py:12 - assignment inside a condition"
+
+    with patch.object(
+        watcher,
+        "_run_direct_review",
+        return_value={
+            "result": "CONCERNS",
+            "failing_checks": ["code_quality"],
+            "summary": rich,
+        },
+    ):
+        watcher._phase1(
+            state, sp, _pr_data(), gh, "owner", "repo", tmp_path, tmp_path / "cfg.yaml", SETTINGS
+        )
+
+    recorded = watcher._load_state(sp).get("last_concerns_summary") or ""
+    assert "foo.py:12" in recorded, f"evidence span was discarded: {recorded!r}"
+    assert recorded != "Failed checks: code_quality"
+
+
+def test_phase1_concerns_falls_back_to_check_ids_without_a_summary(tmp_path: Path) -> None:
+    """With nothing richer available, the bare check-id list is still recorded."""
+    state, sp = _make_state(tmp_path, phase="self_review")
+    gh = _make_gh()
+
+    with patch.object(
+        watcher,
+        "_run_direct_review",
+        return_value={
+            "result": "CONCERNS",
+            "failing_checks": ["code_quality"],
+            "summary": "",
+        },
+    ):
+        watcher._phase1(
+            state, sp, _pr_data(), gh, "owner", "repo", tmp_path, tmp_path / "cfg.yaml", SETTINGS
+        )
+
+    recorded = watcher._load_state(sp).get("last_concerns_summary") or ""
+    assert "code_quality" in recorded
