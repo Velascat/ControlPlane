@@ -1,3 +1,23 @@
+## 2026-08-23 — how often the mirror actually runs, written down
+
+The mirror's cadence had never been established — only that it sometimes failed.
+Recorded in `deploy/forgejo/MIRROR-ANCESTRY.md`: `interval: 8h`,
+`sync_on_commit: true`, and no retry.
+
+The measurement is more convincing than the config, because it shows both
+triggers in one window. Gaps on 2026-08-22/23 run 3, 4, 9, 15, 20 minutes
+around merges, then one clean 8h07m gap overnight when nothing was pushed. Push-
+driven with a timer floor.
+
+The absence of retry cuts both ways and both are worth knowing. A transient
+failure can leave GitHub stale for up to eight hours and nothing reports it, so
+`last_error` on the push-mirror config is the signal — silence is not health.
+Equally, the GH006/GH007 rejections that ran for two days never hammered GitHub;
+they just left the mirror stale.
+
+Measurements from the session that owned mirror verification; written up here
+because its queue judgement (not worth a sixth PR at the time) no longer applies.
+
 ## 2026-08-23 — writing down the pattern, not just the nine bugs
 
 Three days of forge migration produced three separate merges that discarded work
