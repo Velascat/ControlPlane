@@ -1,3 +1,31 @@
+## 2026-08-23 — two of the "reverts" I recorded never happened
+
+A peer session pushed back on a warning I sent it: I had told it PR #23 would
+delete the mirror-cadence section, and it declined to act, arguing the finding
+was a diff-range artifact. It was right, and I reproduced its result before
+accepting it — `git merge-tree --write-tree` produces a tree in which the section
+is present and `MIRROR-ANCESTRY.md` is byte-identical to main's.
+
+The error: `git diff origin/main BRANCH` reports differences in BOTH directions,
+so a file changed on main since the branch was cut appears as though the branch
+deleted it. Three-way merge keeps main's side for files the branch never touched.
+Three-dot (`origin/main...BRANCH`) answers "what does this branch change"; two-dot
+does not.
+
+Re-testing my earlier claims the same way, PR #20 was a false positive too — the
+audit entry survives in the merged tree. I had reported that one as a caught
+near-miss. Two of the four "reverts" I recorded were my own measurement error.
+
+What survives: #14's squash really did drop a merge parent (verified by parent
+count on the merge commit), and #17 really did revert #18 — `install-system-deps.sh`
+is 192 lines in that commit's parent and 0 in the commit itself, a deletion inside
+the commit rather than an artifact of comparing against main.
+
+Item 8's remedy is corrected here, because it recommended the broken check. The
+irony is exact: an audit about substituting a cheap observable for the expensive
+fact recommended a cheap observable that does not answer the question. Simulating
+the merge is the expensive fact.
+
 ## 2026-08-23 — how often the mirror actually runs, written down
 
 The mirror's cadence had never been established — only that it sometimes failed.
