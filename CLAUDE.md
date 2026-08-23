@@ -55,7 +55,16 @@ wake → read <anchor>/.context/sessions/<sid>/checkpoints/<latest>.yaml
 
 The session you are talking to is the lead. Prefer dispatching a subagent over doing the reading yourself — a subagent burns its own context window and returns only its conclusion, which is what keeps a long session workable.
 
-**Before dispatching anything:** verify `CL_ANCHOR` is set. The ContextGuard `PreToolUse` hook (`.claude/hooks/pre_tool_use.sh`) blocks *every* tool call when it is unset, and subagents inherit the environment — so an unanchored session means each dispatched agent dies on its first tool call with a block message, which reads as the agent being broken rather than the session being unanchored. If it is unset, run `eval $(cl session start PlatformManifest)` (or `PrivateManifest` for private work) before delegating.
+**Before dispatching anything:** verify `CL_ANCHOR` is set. The ContextGuard `PreToolUse` hook (`.claude/hooks/pre_tool_use.sh`) blocks *every* tool call when it is unset, and subagents inherit the environment — so an unanchored session means each dispatched agent dies on its first tool call with a block message, which reads as the agent being broken rather than the session being unanchored.
+
+It has to be set in the environment that *launches* Claude Code, not from inside it. The guard intercepts the anchoring command too, so a session can never self-anchor — an unanchored session that tries to fix itself is blocked by the very hook it is trying to satisfy. Export it the way `scripts/operations-center.sh` does, then launch:
+
+```
+export CL_ANCHOR=/home/void/GitHub/PlatformManifest   # any sibling manifest with a .context/ dir
+claude
+```
+
+`cl session start` is the documented flow (see Cognition Lifecycle above), but it currently fails when the manifest is not registered with RepoGraph — `cl session start: manifest 'PlatformManifest' is not registered with RepoGraph. Known: []`. Exporting the anchor alone is enough to satisfy the guard: `cl_dispatch_wrap` activates and then no-ops gracefully without an active CL session, catching `SessionNotStarted`.
 
 **Who does what** — definitions live in `.claude/agents/`:
 
