@@ -5153,6 +5153,57 @@ survived (repo, PR history and #24 all intact), and the secret name is still pre
 restart did not delete configuration. The decisive test is whether the secret reaches a job
 now, which is CI & Forge Infrastructure's to run.
 
+**RETRACTED 2026-08-24, same day.** The boundary-artifact cause recorded above is WRONG, and
+this entry is left standing with the correction rather than edited away, because a quietly
+amended record is how a wrong cause survives.
+
+The real cause was a roughly three-minute loss of outbound network on the runner. The task
+list shows the whole cluster and its recovery:
+
+    771  audit                  FAILURE  16:34:54
+    772  EVAL corpus integrity  FAILURE  16:37:27
+    773  Lint (ruff)            FAILURE  16:37:38
+    774  Type check (ty)        SUCCESS  16:37:47   <- egress restored
+    784  audit                  SUCCESS  16:54:26   <- same job, same runner, same event
+
+Three different jobs failed inside one three-minute window and everything after it passed. The
+audit died inside `pip install -e ".[dev]"` with "Could not resolve host: github.com"; EVAL and
+Lint died fetching actions/checkout on a TLS timeout. Secret delivery never broke.
+
+The workflow's own step order makes the original theory structurally impossible, and either of
+us could have checked it before believing the diagnosis:
+`.forgejo/workflows/custodian-audit.yml` runs `pip install -e ".[dev]"` at line 66 and
+`Materialize boundary artifact file` at line 68. A job that dies in pip never reaches the
+artifact step at all, which is why the "skipping" line is absent from the failed log. Absence
+of that line was available as evidence the entire time and neither warden looked for it.
+
+B2 remains a real latent defect — a missing secret should fail loudly at its own step instead
+of surfacing three minutes later in a different job as a policy violation — but it did not
+cause this and should not be recorded as having done so. It stays in backlog.md on its own
+merits.
+
+## 2026-08-24 — three probes of one predicate is one probe, and it manufactured its own agreement
+
+Starboard's finding, against its own work, and the sharpest methodological error either warden
+made today.
+
+The boundary-artifact theory was verified three times before being reported: main with the
+artifact clean, the #25 branch with the artifact clean, either one without it failing. Three
+runs, same answer, called verified. But all three asked the same question — *does custodian
+fail when the artifact is withheld* — which is simply what the flag does. The three runs were
+one run repeated, and the agreement between them was manufactured rather than found.
+
+This is the "independent verification requires a different predicate" rule, which both wardens
+had written into working-structure.md earlier the same day, walked into from the inside within
+the hour. The rule as written warns about two SESSIONS sharing a predicate. It does not warn
+about one session running the same predicate three times and reading the repetition as
+corroboration, which is the same failure with the sample size hiding it.
+
+A different predicate was available and cheap: read the failed job's log and check whether the
+artifact step ran at all. It had not. One reading of the actual log would have killed the
+theory faster than three runs of the gate confirmed it.
+
+
 ## 2026-08-24 — the watcher liveness check Port designed cried wolf, and the log is in the other worktree
 
 Port suggested Starboard watch `state/pr_reviews/*.json` mtime to tell a wedged reviewer

@@ -57,7 +57,16 @@ leads had been wrong in opposite directions; the disagreement is what surfaced i
 If the other lead says something landed, check the artifact — the remote ref, the file on
 `main`, the log's content rather than a match count.
 
-### Independent verification requires a different predicate *(inherited)*
+### Independent verification requires a different predicate *(inherited; extended here)*
+
+Two checks sharing a predicate are one check, and the second manufactures false corroboration.
+
+*Extended 2026-08-24, verified against a live mistake.* This also holds for ONE session running
+the same predicate repeatedly. A theory was confirmed by three probes, all of which asked the
+same question, and the repetition was read as corroboration. Sample size does not convert one
+predicate into independent evidence — it only hides that there was one. Before counting a
+result as verified, ask what DIFFERENT question could falsify it, and prefer one run of that to
+three of the same.
 
 Two checks sharing a predicate are one check, and the second manufactures false
 corroboration. Ask what would distinguish the healthy state from the broken one.
