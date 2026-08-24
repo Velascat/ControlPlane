@@ -5042,6 +5042,33 @@ after it stops working, which is the exact failure the registry exists to preven
 IDs are stable; addresses are not. Get the address from `ListAgents` immediately before
 sending, every time.
 
+## 2026-08-24 — the disclosure gate does not read commit messages
+
+RC2 caught a scrub-target name in this branch's files; they were scrubbed and the audit
+re-ran clean. The same name went out three times in the commit message of `9368c091`
+instead, because the gate scans tracked file contents and `.hooks/pre-push` never looks at
+the messages of the commits being pushed. `sync_on_commit` is true, so it was on the public
+mirror within seconds. `github/main` was unaffected. Recorded in `backlog.md` as a distinct
+item from the existing RC2 path-scope entry: that one is which paths are scanned, this is
+which objects.
+
+Two sessions then collided on the containment. The co-lead deleted the branch from the forge
+to stop the spread; this session pushed the same branch seconds later, unaware, recreating it
+and re-publishing it to the mirror. Neither action was wrong on its own. The rule that was
+missing is the one already written in `working-structure.md` — announce before touching a
+shared ref — and it failed in the direction nobody had considered: the co-lead announced
+after acting, and this session was not watching for an announcement because it did not know
+the ref was contested.
+
+Resolution: the tainted commit was re-authored by the co-lead as `1b900e38` with a clean
+message, this session cherry-picked its two clean-message commits on top, and the tainted
+ref was deleted from both remotes only after the replacement was published — deleting first
+would have let the mirror republish on the next sync.
+
+Not done, deliberately: `github/main` carries 19 older commit messages with the same name
+from before this work. Removing those needs a history rewrite of a published branch, which
+is a separate decision at a different risk level and was not folded into this cleanup.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:

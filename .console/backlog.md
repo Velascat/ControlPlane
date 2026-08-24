@@ -197,6 +197,25 @@ one shared `_ci_is_green()` used by all four call sites.
 - Scrubbing forward will not remove it from GitHub's published history. The
   mirror force-push would, for the `.console` occurrence, since it replaces that
   commit — the `tools/` one predates the divergence and would survive.
+### RC2 reads file contents, never commit messages — a scrubbed tree still passes
+
+- Verified 2026-08-24. The disclosure gate scans tracked file *contents*. A commit whose
+  files are clean but whose *message* carries a scrub-target name passes
+  `custodian-multi --fail-on-findings`, and `.hooks/pre-push` lets the push through.
+- Happened live rather than in theory. RC2 caught the name in `9368c091`'s files, they were
+  scrubbed, the re-run went clean — and the same name went out three times in the commit
+  message. `sync_on_commit` is true, so it reached the public mirror within seconds on
+  `docs/two-lead-working-structure`. `github/main` was unaffected.
+- A different axis from the `tools/` scope item above: that one is *which paths* are
+  scanned, this is *which objects*. Widening RC2's path scope would not have caught this.
+- Fix shape: have `.hooks/pre-push` scan the messages of the commits actually being pushed
+  (`git log --format=%B <local_sha>..<remote_sha>`), not only the worktree. The ref range is
+  already delivered to the hook on stdin.
+- The asymmetry that makes it expensive: a message cannot be scrubbed forward. Fixing one
+  means re-authoring the commit, which changes its sha, which means deleting the published
+  ref rather than pushing over it — and with `sync_on_commit` the mirror republishes unless
+  the replacement is up first.
+
 ### The three executor backends are on neither this machine nor the forge
 
 - `ensure_executor_backends()` (`scripts/operations-center.sh`) warns for TeamExecutor,
