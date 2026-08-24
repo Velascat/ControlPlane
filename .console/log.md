@@ -5114,6 +5114,45 @@ Collision avoidance is by claim, not by territory: a ref, PR, container action o
 assignment belongs to whichever warden claims it, announced before the first push rather than
 before the destructive act. An unclaimed thing is unclaimed, not the other warden's.
 
+## 2026-08-24 — a seat cannot read its own session id, and Port published a wrong one
+
+The registry listed Port's session id as `4da9ae48-2684-403e-bef0-128af62b17cc`. That is a
+scratchpad and transcript directory name, not a session id. It was inferred from a file path
+rather than read from a listing, and it went into the one column this document calls the only
+stable identifier. Starboard caught it.
+
+Port could not have caught it alone: `list_sessions` excludes the caller, so no session can
+read its own id. That is now a rule rather than an accident — every row is filled in by a
+session that can see it, and a Verified-by column records who actually read each value. An
+unverified id is worse than a blank one, because a blank prompts a lookup and a wrong one
+does not.
+
+Captured all five tech lead session ids while the listing was open, so the registry now
+covers the whole fleet rather than the two wardens.
+
+Also recorded from Starboard, whose finding this is and who owns the diagnosis:
+custodian-audit is failing on both open PRs for a reason that is neither PR. The boundary
+disclosure artifact is not reaching the runner, so the audit runs without it and B2 fires
+("require_boundary_artifact=true but no boundary artifact file was provided"). Verified three
+ways by Starboard: main with the artifact is clean, the #25 branch with the artifact is
+clean, either without it fails. custodian-audit is a REQUIRED check, so nothing merges until
+it is fixed — including this commit.
+
+The mechanism is in `.forgejo/workflows/custodian-audit.yml:68-81`: the materialize step
+exits 0 when the secret is empty, and the audit two steps later then runs with no artifact.
+The comment calls this "graceful: skip if absent", but skipping guarantees the downstream
+required-check failure and reports it as a policy violation rather than a missing secret.
+That is audit item 7 made concrete.
+
+Port's 16:12 Docker restart was raised as the suspect. Not accepted, and not refused —
+untestable from the timeline. No custodian-audit ran between the outage beginning
+(2026-08-23T12:11:59) and the restart (2026-08-24T16:12:28) because the containers were down
+throughout, so there is no observation in the window and the restart is confounded with the
+outage itself. What can be said: Forgejo secrets live on the data volume, the volume plainly
+survived (repo, PR history and #24 all intact), and the secret name is still present — so the
+restart did not delete configuration. The decisive test is whether the secret reaches a job
+now, which is CI & Forge Infrastructure's to run.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:

@@ -40,10 +40,30 @@ an invented name did not. The lesson generalises; the specific working address d
 
 ## Current sessions
 
-| Seat | UI title | Session ID | Address (`ListAgents`) | Environment |
-|------|----------|-----------|------------------------|-------------|
-| Warden — Port | Warden — Port | `4da9ae48-2684-403e-bef0-128af62b17cc` | *resolve at send time* | Windows, reaches repo via `wsl` |
-| Warden — Starboard | Warden — Starboard | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | *resolve at send time* | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
+| Seat | Session ID | Verified by | Environment |
+|------|-----------|-------------|-------------|
+| Warden — Port | `local_0d443259-b6f0-464b-b30e-d838e6db5d60` | Starboard, not self | Windows, repo via `wsl` |
+| Warden — Starboard | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | Port, from `list_sessions` | Windows, cwd `C:\Users\void\Documents\GitHub` |
+| Tech Lead — Reviewer & Merge Pipeline | `local_c5fa7b78-10db-4ed8-a0ba-18a522f9d856` | Port | Windows |
+| Tech Lead — Disclosure & Audit Gates | `local_501c1e34-3db7-484a-80bb-54c2c168cd06` | Port | Windows |
+| Tech Lead — CI & Forge Infrastructure | `local_915ff49a-6ad9-4641-b2c3-39c9811fe285` | Port | Windows |
+| Tech Lead — Execution & Context Lifecycle | `local_f5b7517a-ff73-48a3-a23e-48f8b6bb874f` | Port | Windows |
+| Tech Lead — Fleet Runtime & Watchers | `local_8b99e27b-c76a-4638-859c-f196215c39f0` | Port | Windows |
+
+**No seat can read its own session id.** `list_sessions` excludes the caller, so every row
+here is filled in by a session that can see it, never by its occupant. Port cannot verify
+Port; Starboard cannot verify Starboard. The Verified-by column records who actually read
+each value, because an unverified id is worse than a blank one when the document calls the
+id the only stable identifier.
+
+**Corrected 2026-08-24.** Port previously published its own id as
+`4da9ae48-2684-403e-bef0-128af62b17cc`. That is a scratchpad and transcript directory name,
+not a session id, inferred from a file path rather than read from a listing. Starboard
+caught it. The failure is instructive: it was inferred from a plausible-looking path, in the
+one column the document itself says must be trustworthy.
+
+Addresses are recorded nowhere — see the addressing section above. Resolve at send time,
+every time.
 
 **The two seats have IDENTICAL scope.** This is not a divided domain with a shared area;
 there is no division. Both wardens:
