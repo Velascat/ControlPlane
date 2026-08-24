@@ -5087,6 +5087,33 @@ was changed externally to "Co-Lead - Pipeline & Deploy" at some point without ei
 doing it, which is a second reason not to treat a UI title as evidence of a role. The
 registry is the evidence.
 
+## 2026-08-24 — the two warden seats have identical scope, and the names now say so
+
+Second correction to the same thing in one day. The seats were renamed from Lead/Co-Lead to
+Warden — Structure and Docs / Warden — Verification and Tooling, which removed the seniority
+but introduced a worse problem: it described a division of domain that does not exist.
+
+Two concrete faults with the domain names. "Verification and Tooling" was a superset of two
+tech-lead seats briefed an hour earlier — Disclosure & Audit Gates owns verification, CI &
+Forge Infrastructure owns tooling — so a warden's stated domain competed with its own tech
+leads. And "Structure and Docs" was not a domain at all; it was back-formed from whatever
+that session happened to be doing when the registry was first written.
+
+The deeper fault is that any domain name hands either warden a reason to answer a challenge
+with "that is your area" rather than engaging with it. That is precisely the failure the
+second seat exists to prevent. Every disagreement that caught something real today crossed
+the supposed boundary: the two-dot diff misdiagnosis, the commit-message leak, and the stale
+squash claim inherited by two tech leads.
+
+Both seats are now `Warden — Port` and `Warden — Starboard`. The distinguisher is
+deliberately empty of meaning: a symmetric pair with no seniority and no order, chosen so
+that no scope can be read into it. Both wardens sequence refs, merges, deploys and container
+lifecycle, both direct ALL tech leads, and neither has an area the other stays out of.
+
+Collision avoidance is by claim, not by territory: a ref, PR, container action or tech-lead
+assignment belongs to whichever warden claims it, announced before the first push rather than
+before the destructive act. An unclaimed thing is unclaimed, not the other warden's.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:

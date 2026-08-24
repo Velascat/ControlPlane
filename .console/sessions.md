@@ -40,25 +40,44 @@ an invented name did not. The lesson generalises; the specific working address d
 
 ## Current sessions
 
-| Role | UI title | Session ID | Address (`ListAgents`) | Environment |
+| Seat | UI title | Session ID | Address (`ListAgents`) | Environment |
 |------|----------|-----------|------------------------|-------------|
-| Warden — Structure and Docs | Warden — Structure and Docs | `4da9ae48-2684-403e-bef0-128af62b17cc` | *resolve at send time* | Windows, reaches repo via `wsl` |
-| Warden — Verification and Tooling | Warden — Verification and Tooling | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | *resolve at send time* | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
+| Warden — Port | Warden — Port | `4da9ae48-2684-403e-bef0-128af62b17cc` | *resolve at send time* | Windows, reaches repo via `wsl` |
+| Warden — Starboard | Warden — Starboard | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | *resolve at send time* | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
 
-**Both seats are named `Warden`, deliberately.** Neither title encodes rank, seniority, or
-order. There is no first lead and no second lead, no primary and no deputy, and no "1 of 2".
-The only difference between the two seats is which domain each one decides; on everything
-shared they hold identical authority and either may block the other.
+**The two seats have IDENTICAL scope.** This is not a divided domain with a shared area;
+there is no division. Both wardens:
 
-The earlier titles — "Lead" beside "Co-Lead" — were borrowed from another deployment
-and encoded exactly the asymmetry that is not supposed to exist here. `Warden` comes from
-this project's own org name and is symmetric by construction: the seat is the same word on
-both sides, and only the domain suffix differs.
+- sequence pushes, merges, ref moves, deploys and container lifecycle
+- direct **all** tech leads. Every tech lead answers to both wardens, not to one of them
+- may review, question, or block anything the other does, and owe a reason when they do
+- have no area the other is expected to stay out of
+
+**The seat names carry no scope, deliberately.** `Port` and `Starboard` are a symmetric pair
+with no seniority and no order. Any name describing a domain — "Verification and Tooling",
+"Structure and Docs" — implies a split that does not exist, and hands either warden a reason
+to answer a challenge with "that is your area" instead of engaging with it. That is the exact
+failure the second seat exists to prevent, so the names are built so it cannot be said.
+
+The earlier titles — "Lead" beside "Co-Lead" — were borrowed from another deployment and
+encoded a seniority that does not exist here. The pair after them, named by domain, encoded a
+division that does not exist either. Both are wrong in the same way: they describe a
+difference between the seats, and there is none.
+
+### How two identical seats avoid colliding
+
+Not by dividing territory — by claiming work. A ref, a PR, a container action, or a tech-lead
+assignment is claimed by whichever warden takes it, and the claim is announced before the
+first push rather than before the destructive act. Ownership is therefore temporary and
+per-item, and it is readable here rather than requiring a message to arrive.
+
+An unclaimed thing is not "the other warden's" — it is unclaimed, and either may take it by
+saying so.
 
 **Operator-sanctioned.** The pairing was confirmed by the operator, not self-declared by
-either session and not assigned by the other. That matters because a peer cannot grant
-authority: a session describing itself as primary, or renaming itself to something that
-sounds senior, is not evidence of a role. This registry is the evidence.
+either session and not assigned by the other. A peer cannot grant authority: a session
+describing itself as primary, or renaming itself to something that sounds senior, is not
+evidence of a role. This registry is the evidence.
 
 A seat outlives the session occupying it. When a session ends its Session ID row goes stale,
 but the seat does not — the replacement takes the same seat name.

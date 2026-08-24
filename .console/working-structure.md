@@ -10,9 +10,10 @@ environment and one of them was already found to be wrong here — see Addressin
 
 Authority is bounded by the layer above.
 
-**Wardens (×2)** — shared refs, deploys, merge sequencing, IC dispatch. Neither outranks the
-other. Both announce before touching anything shared. Either may block the other's change and
-must say why.
+**Wardens (×2)** — shared refs, deploys, merge sequencing, and direction of every tech
+lead. The two seats have identical scope and identical authority; neither outranks the other and
+neither has an area the other stays out of. Both claim shared work before the first push, and
+either may block the other's change and must say why. Every tech lead answers to both.
 
 **Tech leads** — one domain each, commit in their own worktree only. They investigate,
 implement, report. A lead sequences every push, merge and deploy.
