@@ -22,6 +22,15 @@ Verified 2026-08-23: `SendMessage` **rejected** the `local_…` form with "No ag
 reachable" and **accepted** the bare `ListAgents` name. Replying to the envelope `from`
 address does not work here.
 
+**The `ListAgents` name is NOT stable over time.** Verified 2026-08-23/24: the session whose
+id is `local_23b52e6d-…` was listed as `github-72 [1d8cba]`, and roughly an hour later the
+same session — same id, same title, per `list_sessions` — was listed as
+`github-d8 [e7315c]`. Name and ref both changed while the session persisted.
+
+This registry therefore records **no** address. The Address column says *resolve at send
+time* on purpose: any address written down here is a trap with a shelf life of about an hour,
+and it will look authoritative long after it stops working.
+
 **So: get the address from `ListAgents` immediately before sending, and copy the row
 verbatim. Never derive an address from a session ID, a title, or a message envelope.** Append
 the ` [ref]` only when two rows share a name or an error asks you to disambiguate.
@@ -34,7 +43,7 @@ an invented name did not. The lesson generalises; the specific working address d
 | Role | UI title | Session ID | Address (`ListAgents`) | Environment |
 |------|----------|-----------|------------------------|-------------|
 | Lead (1 of 2) — agent structure and docs | Lead — Agent Structure and Docs | `4da9ae48-2684-403e-bef0-128af62b17cc` | *(not listed to itself)* | Windows, reaches repo via `wsl` |
-| Lead (2 of 2) — session management | Session management and cleanup | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | `github-72` | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
+| Lead (2 of 2) — session management | Session management and cleanup | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | *resolve at send time* | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
 
 **Operator-sanctioned 2026-08-23.** The two-lead pairing was confirmed by the operator, not
 self-declared by either session and not assigned by the other. This matters: under the

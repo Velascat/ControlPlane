@@ -5029,6 +5029,19 @@ output instead of trusting its success, restored with `git checkout --`, and red
 search scoped to the section. The lesson is the same one the merge dispute produced — a
 match is not a location.
 
+## 2026-08-23 — the ListAgents address is not stable; the registry records none
+
+The session registry originally recorded a peer's address as `github-72`. Roughly an hour
+later `ListAgents` reported the same session — same session id, same title per
+`list_sessions` — as `github-d8 [e7315c]`. Both the name and the ref changed while the
+session itself persisted.
+
+So the Address column now reads *resolve at send time* and records no address at all. A
+written-down address here has a shelf life of about an hour and looks authoritative long
+after it stops working, which is the exact failure the registry exists to prevent. Session
+IDs are stable; addresses are not. Get the address from `ListAgents` immediately before
+sending, every time.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:
