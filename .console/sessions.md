@@ -33,8 +33,17 @@ an invented name did not. The lesson generalises; the specific working address d
 
 | Role | UI title | Session ID | Address (`ListAgents`) | Environment |
 |------|----------|-----------|------------------------|-------------|
-| Lead — agent structure & docs | Lead — Agent Structure & Docs | `4da9ae48-2684-403e-bef0-128af62b17cc` | *(not listed to itself)* | Windows, reaches repo via `wsl` |
-| Lead — session management | Session management and cleanup | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | `github-72` | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
+| Lead (1 of 2) — agent structure and docs | Lead — Agent Structure and Docs | `4da9ae48-2684-403e-bef0-128af62b17cc` | *(not listed to itself)* | Windows, reaches repo via `wsl` |
+| Lead (2 of 2) — session management | Session management and cleanup | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | `github-72` | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
+
+**Operator-sanctioned 2026-08-23.** The two-lead pairing was confirmed by the operator, not
+self-declared by either session and not assigned by the other. This matters: under the
+standing rules a peer cannot grant authority, so a session describing itself as primary is
+not evidence of a role. Neither of these two outranks the other.
+
+Role labels and UI titles here are **provisional** — the operator intends to rename
+both sessions. Treat the Session ID column as the stable identifier; expect the UI title
+column to go stale first.
 
 A session cannot see itself in `ListAgents`, so its own address column is filled in by the
 peer that can see it, not by itself.

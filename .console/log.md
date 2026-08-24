@@ -5014,6 +5014,21 @@ documented in `guidelines.md` and there is no way to discover it except by hitti
 
 No source changed; no tests run. Documentation and one `.gitignore` negation pair.
 
+## 2026-08-23 — docs: operator confirmed the two-lead pairing
+
+The operator sanctioned the second lead explicitly rather than either session assuming it.
+Recorded in `.console/sessions.md`, because under the standing rules a peer cannot grant
+authority — a session describing itself as primary is not evidence of a role, and the
+registry needs to say which it is. Role labels and UI titles are marked provisional; the
+operator intends to rename both sessions, so the Session ID column is the stable identifier.
+
+Worth recording as a near-miss in the editing itself: the first patch searched for the
+session id by line prefix and clobbered a row in the addressing table higher up the same
+file, because that id legitimately appears there too. Caught by reading the script's own
+output instead of trusting its success, restored with `git checkout --`, and redone with the
+search scoped to the section. The lesson is the same one the merge dispute produced — a
+match is not a location.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:
