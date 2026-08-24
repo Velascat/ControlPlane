@@ -5069,6 +5069,24 @@ Not done, deliberately: `github/main` carries 19 older commit messages with the 
 from before this work. Removing those needs a history rewrite of a published branch, which
 is a separate decision at a different risk level and was not folded into this cleanup.
 
+## 2026-08-24 — the two lead seats are named Warden, and neither name carries rank
+
+The seats were called "Lead" and "Co-Lead". Both names were carried over from another
+deployment, and the pair encoded an asymmetry that is not supposed to exist: one sounds
+senior to the other. The registry compounded it with "1 of 2" and "2 of 2", which adds an
+ordering on top of a relationship that has none.
+
+Both seats are now `Warden`, differing only by domain suffix — Structure and Docs,
+Verification and Tooling. The word comes from this project's own org name rather than a
+borrowed one, and it is symmetric by construction: the same noun on both sides, so there is
+no version of the pair where one reads as the other's deputy.
+
+Also recorded: a seat outlives the session occupying it. Session IDs go stale when a session
+ends; the seat does not, and the replacement takes the same name. This session's own title
+was changed externally to "Co-Lead - Pipeline & Deploy" at some point without either warden
+doing it, which is a second reason not to treat a UI title as evidence of a role. The
+registry is the evidence.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:

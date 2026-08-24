@@ -10,7 +10,7 @@ environment and one of them was already found to be wrong here — see Addressin
 
 Authority is bounded by the layer above.
 
-**Leads (×2)** — shared refs, deploys, merge sequencing, IC dispatch. Neither outranks the
+**Wardens (×2)** — shared refs, deploys, merge sequencing, IC dispatch. Neither outranks the
 other. Both announce before touching anything shared. Either may block the other's change and
 must say why.
 
@@ -24,10 +24,11 @@ definitions in `.claude/agents/` are these.
 **The log** — `.console/log.md`. The only thing that survives a session ending. Findings
 written the same hour are the memory; nobody's context is.
 
-## Why two leads
+## Why two wardens
 
 A lone lead that gets something wrong stays wrong: its own verification shares its blind spot.
-The second lead is not a deputy and takes no instruction from the first. It exists to
+Neither warden is a deputy and neither takes instruction from the other. The second seat
+exists to
 disagree.
 
 *Verified here.* On 2026-08-23 a peer lead reported that PR #23 would delete a 44-line section

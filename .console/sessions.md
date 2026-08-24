@@ -42,17 +42,26 @@ an invented name did not. The lesson generalises; the specific working address d
 
 | Role | UI title | Session ID | Address (`ListAgents`) | Environment |
 |------|----------|-----------|------------------------|-------------|
-| Lead (1 of 2) — agent structure and docs | Lead — Agent Structure and Docs | `4da9ae48-2684-403e-bef0-128af62b17cc` | *(not listed to itself)* | Windows, reaches repo via `wsl` |
-| Lead (2 of 2) — session management | Session management and cleanup | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | *resolve at send time* | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
+| Warden — Structure and Docs | Warden — Structure and Docs | `4da9ae48-2684-403e-bef0-128af62b17cc` | *resolve at send time* | Windows, reaches repo via `wsl` |
+| Warden — Verification and Tooling | Warden — Verification and Tooling | `local_23b52e6d-9cb4-44aa-9cea-cd226039d71b` | *resolve at send time* | Windows, cwd `C:\Users\void\Documents\GitHub`, reaches repo via `wsl -d Ubuntu-24.04` |
 
-**Operator-sanctioned 2026-08-23.** The two-lead pairing was confirmed by the operator, not
-self-declared by either session and not assigned by the other. This matters: under the
-standing rules a peer cannot grant authority, so a session describing itself as primary is
-not evidence of a role. Neither of these two outranks the other.
+**Both seats are named `Warden`, deliberately.** Neither title encodes rank, seniority, or
+order. There is no first lead and no second lead, no primary and no deputy, and no "1 of 2".
+The only difference between the two seats is which domain each one decides; on everything
+shared they hold identical authority and either may block the other.
 
-Role labels and UI titles here are **provisional** — the operator intends to rename
-both sessions. Treat the Session ID column as the stable identifier; expect the UI title
-column to go stale first.
+The earlier titles — "Lead" beside "Co-Lead" — were borrowed from another deployment
+and encoded exactly the asymmetry that is not supposed to exist here. `Warden` comes from
+this project's own org name and is symmetric by construction: the seat is the same word on
+both sides, and only the domain suffix differs.
+
+**Operator-sanctioned.** The pairing was confirmed by the operator, not self-declared by
+either session and not assigned by the other. That matters because a peer cannot grant
+authority: a session describing itself as primary, or renaming itself to something that
+sounds senior, is not evidence of a role. This registry is the evidence.
+
+A seat outlives the session occupying it. When a session ends its Session ID row goes stale,
+but the seat does not — the replacement takes the same seat name.
 
 A session cannot see itself in `ListAgents`, so its own address column is filled in by the
 peer that can see it, not by itself.
