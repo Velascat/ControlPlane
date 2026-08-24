@@ -5235,6 +5235,26 @@ transition cannot prove liveness, because healthy-idle and dead are identical un
 a multi-worktree repo "the logs" is ambiguous: some paths are shared by symlink and some are
 not, and the unshared ones go stale in silence.
 
+## 2026-08-24 — the answer was two lines above the failure, in a comment nobody read
+
+Starboard's, noticed while verifying a correction rather than while looking for it.
+
+Both wardens spent an hour theorising about a three-minute CI failure. The step that died was
+`pip install -e ".[dev]"` in `.forgejo/workflows/custodian-audit.yml`, and the comment
+immediately above that line warns that a failed install leaves the adapters with no ruff, which
+Custodian reports as "not installed" and skips, so the gate then passes vacuously — "worse than
+failing, because it looks green".
+
+Someone had already hit this exact failure class in this exact file, fixed it, and written down
+why. Neither warden read it. One of us had the file open.
+
+Two consequences. The silent-degradation class is endemic to this repo rather than anything the
+wardens introduced — it was understood here before either arrived, which raises the prior that
+any new instance is another example rather than a discovery. And a habit worth keeping: when a
+step fails, read the comments around that step before theorising. This repository annotates its
+own hazards at the site, and it rewards reading them more than it rewards reasoning forward
+from a plausible mechanism.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:

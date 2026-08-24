@@ -213,6 +213,34 @@ changes on a state transition cannot prove liveness, because the healthy steady 
 dead state are identical under it. And in a multi-worktree repo, "the logs" is ambiguous —
 some paths are shared by symlink and some are not, and the unshared ones go stale silently.
 
+### Read the comments at the failure site before theorising *(verified here)*
+
+This codebase documents its own traps where they live, and today the answer was two lines
+above the step that failed.
+
+Both wardens spent an hour theorising about a three-minute CI failure. The step that actually
+died was `pip install -e ".[dev]"` in `.forgejo/workflows/custodian-audit.yml`, and the comment
+immediately above it reads:
+
+```
+# NOT best-effort (`|| true`) any more: a failed install left the adapters
+# with no ruff at all, which Custodian reports as "not installed" and skips.
+# The gate then passes vacuously — worse than failing, because it looks green.
+run: pip install -e ".[dev]"
+```
+
+Someone had already hit this exact failure class in this exact file, fixed it, and written down
+why. Neither warden read it, and one of us had the file open at the time.
+
+Two things follow. The silent-degradation class is **endemic to this repo rather than something
+we introduced** — it was understood here before either of us arrived, which raises the prior on
+any new instance being another example rather than a novel discovery. And the specific habit:
+when a step fails, read the comments around that step first. A repository that annotates its own
+hazards at the site rewards reading them more than it rewards reasoning forward from a plausible
+mechanism.
+
+*Credit: Starboard, noticed while verifying a correction rather than while looking for it.*
+
 ### A guard defeated by the thing it guards against *(inherited — not audited here)*
 
 Ask of any guard: what would I see if this were broken? If the answer is "exactly what I see
