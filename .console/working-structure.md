@@ -162,6 +162,48 @@ REPOGRAPH_BOUNDARY_ARTIFACT_FILE=<PrivateManifest>/dist/boundary_disclosure_arti
   .venv/bin/custodian-multi --repos . --verbose
 ```
 
+### A liveness check must distinguish "no work to do" from "not working"
+
+*Verified here 2026-08-24, and the check that failed was one built specifically to avoid this.*
+
+Port suggested watching `state/pr_reviews/*.json` mtime to tell a wedged reviewer watcher from
+a healthy one, since a live pid says nothing about whether the process is progressing.
+Starboard used it and it cried wolf within the hour: state files 15 minutes stale, watcher
+apparently dead. It was not. **State files are only written when state CHANGES**, and a PR
+sitting in a settled "waiting on CI" condition produces no writes for as long as CI takes,
+which on a capacity-1 runner is routinely 15+ minutes. Silence meant "nothing to write", not
+"not working".
+
+The predicate that works is the watcher's own log mtime plus its process state:
+
+```
+ls -la /home/void/oc-fleet-main/logs/local/watch-all/watch-resume.log
+ps -o pid,stat,wchan:20,time,etime -p <pid>
+```
+
+A healthy watcher shows a log written seconds ago, `STAT=Ss`, `WCHAN=poll_schedule_timeout`,
+and a CPU time of a couple of seconds against an elapsed time of hours.
+
+**The path is the trap.** The live log is in the FLEET WORKTREE, not the primary checkout.
+`oc-fleet-main/state` is a symlink to the primary checkout's `state/`, so state is shared
+between them — but `oc-fleet-main/logs` is a real directory and is NOT shared. The primary
+checkout's `logs/local/watch-all/` holds files from 2026-08-21. Anyone checking watcher
+liveness from the repo they are standing in sees days-old logs and concludes the fleet is
+dead.
+
+Read the watcher's actual destination rather than the path that looks right:
+
+```
+tr '\0' ' ' < /proc/<pid>/cmdline    # what it was launched as, and its --status-dir
+ls -l /proc/<pid>/cwd                # which worktree it is running from
+ls -l /proc/<pid>/fd/1               # where its stdout actually goes
+```
+
+Two general shapes here, both worth more than the specific commands. An observable that only
+changes on a state transition cannot prove liveness, because the healthy steady state and the
+dead state are identical under it. And in a multi-worktree repo, "the logs" is ambiguous —
+some paths are shared by symlink and some are not, and the unshared ones go stale silently.
+
 ### A guard defeated by the thing it guards against *(inherited — not audited here)*
 
 Ask of any guard: what would I see if this were broken? If the answer is "exactly what I see

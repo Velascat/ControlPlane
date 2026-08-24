@@ -5153,6 +5153,37 @@ survived (repo, PR history and #24 all intact), and the secret name is still pre
 restart did not delete configuration. The decisive test is whether the secret reaches a job
 now, which is CI & Forge Infrastructure's to run.
 
+## 2026-08-24 — the watcher liveness check Port designed cried wolf, and the log is in the other worktree
+
+Port suggested Starboard watch `state/pr_reviews/*.json` mtime to tell a wedged reviewer
+watcher from a healthy one, on the correct principle that a live pid proves nothing about
+progress. The predicate was wrong and Starboard caught it on first use: state files 15 minutes
+stale, watcher apparently dead, watcher entirely fine. State files are written only when state
+CHANGES, and a PR settled in "waiting on CI" produces no writes for as long as CI takes —
+routinely 15+ minutes on a capacity-1 runner. Silence meant nothing to write, not not working.
+
+This is the same defect class both wardens keep finding in the codebase, committed by a warden,
+in the check built specifically to avoid it: an observable that is cheap to read, assumed to
+track the fact.
+
+Verifying the correction surfaced a second trap neither warden had. The live watcher log is
+NOT in the primary checkout. `oc-fleet-main/state` is a symlink to the primary checkout's
+`state/`, so state is shared between the worktrees — but `oc-fleet-main/logs` is a real
+directory and is not. The primary checkout's `logs/local/watch-all/` holds files dated
+2026-08-21. Anyone checking liveness from the repo they are standing in sees days-old logs and
+concludes the fleet is dead.
+
+The watcher's real destination was found by reading the process rather than guessing the path:
+`/proc/707/fd/1` points at `/home/void/oc-fleet-main/logs/local/watch-all/watch-resume.log`,
+and `/proc/707/cwd` shows it running from the fleet worktree. Verified healthy: log written 2
+seconds before the check, STAT=Ss, WCHAN=poll_schedule_timeout, 2 seconds of CPU against
+1h57m elapsed.
+
+Both shapes recorded in working-structure.md. An observable that only changes on a state
+transition cannot prove liveness, because healthy-idle and dead are identical under it. And in
+a multi-worktree repo "the logs" is ambiguous: some paths are shared by symlink and some are
+not, and the unshared ones go stale in silence.
+
 ---
 
 _Older entries were rotated out to stay within the OC2 500KB budget:
